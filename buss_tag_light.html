@@ -49,35 +49,21 @@
             border-radius: 10px;
             border-left: 15px solid var(--skane-orange);
             box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
         }
-        
-        /* Subtil bakgrundsfärg för buss/tåg */
-        .bus-row { 
-            border-left-color: var(--skane-orange); 
-            background: linear-gradient(90deg, #fffcf5 0%, #ffffff 100%);
-        }
-        .train-row { 
-            border-left-color: var(--skane-purple); 
-            background: linear-gradient(90deg, #faf7fc 0%, #ffffff 100%);
-        }
+        .train-row { border-left-color: var(--skane-purple); }
 
         .line-badge {
-            font-size: 2rem;
+            font-size: 2.2rem;
             font-weight: bold;
-            padding: 10px;
+            padding: 10px 15px;
             border-radius: 8px;
-            min-width: 130px; /* Lite bredare för att få plats med ikon */
+            min-width: 100px;
             text-align: center;
             margin-right: 25px;
             color: #000;
             background-color: var(--skane-orange);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
         }
-        .train-badge { background-color: var(--skane-purple); color: white; }
+        .train { background-color: var(--skane-purple); color: white; }
 
         .dest-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .dest-row { display: flex; align-items: baseline; gap: 15px; }
@@ -178,4 +164,52 @@
                         } else {
                             if (line === "141" && (dLow.includes("malmö") || dLow.includes("södervärn"))) viaText = "VIA MALMÖ JÄGERSRO";
                             else if (line === "145" && dLow.includes("trelleborg")) viaText = "VIA ALSTAD, GYLLE";
-                            else if (line === "1
+                            else if (line === "165" && dLow.includes("lund")) viaText = "VIA KLÅGERUP, STAFFANSTORP VÄG 108";
+                        }
+
+                        const schedTime = dep.time.substring(0, 5);
+                        const realTime = (dep.rtTime || dep.time).substring(0, 5);
+                        const delayMin = getDelay(schedTime, realTime);
+                        
+                        // Beräkna "Om x minuter" för de 3 översta
+                        let minutesInfo = "";
+                        if (index < 3) {
+                            const minLeft = getMinutesUntil(realTime);
+                            minutesInfo = minLeft <= 0 ? "(Avgår nu)" : `(Avgår om ${minLeft} min)`;
+                        }
+
+                        html += `
+                            <div class="departure-row ${isTrain ? 'train-row' : ''}">
+                                <div class="line-badge ${isTrain ? 'train' : ''}">${line}</div>
+                                <div class="dest-container">
+                                    <div class="dest-row">
+                                        <div class="dest">${destName}</div>
+                                        ${minutesInfo ? `<div class="in-minutes-inline">${minutesInfo}</div>` : ''}
+                                    </div>
+                                    ${viaText ? `<div class="via">${viaText}</div>` : ''}
+                                </div>
+                                <div class="time-box">
+                                    <span class="time">${realTime}</span>
+                                    ${delayMin > 0 ? `<span class="delay">+${delayMin}</span>` : ''}
+                                </div>
+                            </div>`;
+                    });
+                    document.getElementById('board').innerHTML = html;
+                    document.getElementById('debug').innerText = "Uppdaterad: " + new Date().toLocaleTimeString();
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        function clock() {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
+        }
+
+        setInterval(clock, 1000);
+        setInterval(updateBoard, 30000);
+        clock();
+        updateBoard();
+    </script>
+</body>
+</html>
