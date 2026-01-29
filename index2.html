@@ -167,4 +167,22 @@
             return `
                 <div class="departure-row ${rowClass}">
                     <div class="line-badge ${badgeClass}">${line}</div>
-                    <div
+                    <div class="dest">${dest}</div>
+                    <div class="time-box">
+                        <span class="time">${realTime}</span>
+                        ${delay > 0 ? `<span class="delay">+${delay}</span>` : ''}
+                    </div>
+                </div>`;
+        }
+
+        function clock() {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
+        }
+
+        setInterval(clock, 1000);
+        setInterval(updateBoards, 30000);
+        clock();
+        updateBoards();
+    </script>
+</body>
+</html>
