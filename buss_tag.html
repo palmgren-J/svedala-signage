@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Live - Skåne-version</title>
+    <title>Svedala Live - Endast Skåne</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
@@ -25,7 +25,7 @@
             margin-bottom: 15px;
         }
         .clock { font-size: 2.2rem; font-weight: bold; }
-        h2 { font-size: 1.2rem; color: var(--skane-yellow); text-transform: uppercase; margin: 20px 0 10px 0; border-left: 5px solid var(--skane-yellow); padding-left: 10px; }
+        h2 { font-size: 1.2rem; color: var(--skane-yellow); text-transform: uppercase; margin: 15px 0 10px 0; border-left: 5px solid var(--skane-yellow); padding-left: 10px; }
 
         .row {
             display: flex;
@@ -43,7 +43,7 @@
             font-weight: bold;
             padding: 5px 10px;
             border-radius: 4px;
-            min-width: 60px;
+            min-width: 65px;
             text-align: center;
             margin-right: 20px;
             color: #000;
@@ -63,54 +63,56 @@
     </div>
 
     <div id="board">
-        <h2>Pågatåg (Stationen)</h2>
-        <div id="train-list">Ansluter till Skånetrafiken...</div>
+        <h2>Pågatåg</h2>
+        <div id="train-list">Laddar tåg från Skåne...</div>
         
-        <h2>Bussar (Stortorget)</h2>
-        <div id="bus-list">Ansluter till Skånetrafiken...</div>
+        <h2>Bussar</h2>
+        <div id="bus-list">Laddar bussar...</div>
     </div>
 
     <script>
         const apiKey = '029d3e62-8c57-4161-a699-e81a51c12931';
         
-        // Hårdkodade ID:n för att tvinga systemet till Skåne
-        const ID_STATION_SKANE = '740000158';    
-        const ID_STORTORGET_SKANE = '740068571'; 
+        // Exakta ID för Svedala i Skåne
+        const ID_STATION = '740000158';    
+        const ID_STORTORGET = '740068571'; 
 
         async function update() {
             try {
-                // Hämta båda platserna separat med de exakta ID-numren
+                // Hämta data separat
                 const [tRes, bRes] = await Promise.all([
-                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${ID_STATION_SKANE}&format=json&accessId=${apiKey}&duration=60`),
-                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${ID_STORTORGET_SKANE}&format=json&accessId=${apiKey}&duration=60`)
+                    fetch('https://api.resrobot.se/v2.1/departureBoard?id=' + ID_STATION + '&format=json&accessId=' + apiKey),
+                    fetch('https://api.resrobot.se/v2.1/departureBoard?id=' + ID_STORTORGET + '&format=json&accessId=' + apiKey)
                 ]);
 
                 const tData = await tRes.json();
                 const bData = await bRes.json();
 
-                // 1. Rendera Pågatåg
+                // 1. Rendera Tåg (Med filter mot Dalarna)
                 let tHtml = '';
                 if (tData.Departure) {
-                    // Vi rensar bort allt som mot förmodan skulle innehålla Mora/Falun/Rättvik
-                    const skaneTrains = tData.Departure.filter(d => {
+                    const skaneTrains = tData.Departure.filter(function(d) {
                         const dStr = d.direction.toLowerCase();
-                        return !dStr.includes("mora") && !dStr.includes("falun") && !dStr.includes("rättvik");
+                        // TOTALFÖRBJUD mot Dalarna-orter
+                        return !dStr.includes("mora") && !dStr.includes("falun") && 
+                               !dStr.includes("rättvik") && !dStr.includes("borlänge") &&
+                               !dStr.includes("vicarbyn") && !dStr.includes("dalstuga");
                     }).slice(0, 4);
 
-                    skaneTrains.forEach(d => {
-                        tHtml += `<div class="row train-row">
-                            <div class="badge train-badge">Påga</div>
-                            <div class="dest">${d.direction.split(',')[0]}</div>
-                            <div class="time">${(d.rtTime || d.time).substring(0, 5)}</div>
-                        </div>`;
+                    skaneTrains.forEach(function(d) {
+                        tHtml += '<div class="row train-row">' +
+                            '<div class="badge train-badge">Påga</div>' +
+                            '<div class="dest">' + d.direction.split(',')[0] + '</div>' +
+                            '<div class="time">' + (d.rtTime || d.time).substring(0, 5) + '</div>' +
+                        '</div>';
                     });
                 }
-                document.getElementById('train-list').innerHTML = tHtml || "Inga tåg hittades i Svedala (Skåne)";
+                document.getElementById('train-list').innerHTML = tHtml || "Inga tåg hittades i Skåne just nu";
 
                 // 2. Rendera Bussar (141, 145, 165)
                 let bHtml = '';
                 if (bData.Departure) {
-                    const filteredBuses = bData.Departure.filter(d => {
+                    const filteredBuses = bData.Departure.filter(function(d) {
                         const line = d.ProductAtStop.displayNumber || d.transportNumber;
                         const dest = d.direction.toLowerCase();
                         if (line === "141" && dest.includes("malmö")) return true;
@@ -119,29 +121,29 @@
                         return false;
                     }).slice(0, 5);
 
-                    filteredBuses.forEach(d => {
+                    filteredBuses.forEach(function(d) {
                         const line = d.ProductAtStop.displayNumber || d.transportNumber;
-                        bHtml += `<div class="row">
-                            <div class="badge">${line}</div>
-                            <div class="dest">${d.direction.split(',')[0].replace('Svedala', '').trim()}</div>
-                            <div class="time">${(d.rtTime || d.time).substring(0, 5)}</div>
-                        </div>`;
+                        bHtml += '<div class="row">' +
+                            '<div class="badge">' + line + '</div>' +
+                            '<div class="dest">' + d.direction.split(',')[0].replace('Svedala', '').trim() + '</div>' +
+                            '<div class="time">' + (d.rtTime || d.time).substring(0, 5) + '</div>' +
+                        '</div>';
                     });
                 }
-                document.getElementById('bus-list').innerHTML = bHtml || "Inga valda bussar hittades i Svedala (Skåne)";
+                document.getElementById('bus-list').innerHTML = bHtml || "Inga valda bussar just nu";
 
-            } catch (e) { 
-                console.error(e);
-                document.getElementById('board').innerHTML = "<p style='color:red'>Kunde inte hämta data. Kontrollera internet.</p>";
-            }
+            } catch (e) { console.error(e); }
         }
 
         function clock() {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
+            var d = new Date();
+            var hh = d.getHours() < 10 ? '0' + d.getHours() : d.getHours();
+            var mm = d.getMinutes() < 10 ? '0' + d.getMinutes() : d.getMinutes();
+            document.getElementById('clock').innerText = hh + ':' + mm;
         }
 
         setInterval(clock, 1000);
-        setInterval(update, 45000); // Uppdatera var 45:e sekund
+        setInterval(update, 30000);
         clock();
         update();
     </script>
