@@ -44,12 +44,13 @@
             align-items: center;
             background: white;
             margin-bottom: 12px;
-            padding: 18px 20px;
+            padding: 20px;
             border-radius: 10px;
             border-left: 15px solid var(--skane-orange);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
         }
 
+        /* Färgkodning av rader */
         .train-row { 
             border-left-color: var(--skane-purple); 
             background: #faf7fc; 
@@ -60,29 +61,19 @@
         }
 
         .line-badge {
-            font-size: 2rem;
+            font-size: 2.2rem;
             font-weight: bold;
-            padding: 8px 12px;
+            padding: 10px 15px;
             border-radius: 8px;
-            min-width: 130px;
+            min-width: 100px;
             text-align: center;
             margin-right: 25px;
             color: #000;
             background-color: var(--skane-orange);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
         }
-        .train-badge { background-color: var(--skane-purple); color: white; }
-
-        /* Stil för de nya ikonerna */
-        .transport-icon {
-            width: 32px;
-            height: 32px;
-            fill: currentColor;
-            display: flex;
-            align-items: center;
+        .train-badge { 
+            background-color: var(--skane-purple); 
+            color: white; 
         }
 
         .dest-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -94,13 +85,13 @@
             color: var(--text-main);
         }
         .in-minutes-inline {
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             color: var(--text-minutes);
             font-weight: 400;
             font-style: italic;
         }
         .via { 
-            font-size: 1.2rem; 
+            font-size: 1.3rem; 
             color: var(--text-sub); 
             text-transform: uppercase; 
             margin-top: -2px; 
@@ -130,10 +121,6 @@
 
     <script>
         const apiKey = '029d3e62-8c57-4161-a699-e81a51c12931';
-
-        // Stilrena SVG-ikoner
-        const busIcon = `<svg class="transport-icon" viewBox="0 0 24 24"><path d="M18,11H6V6h12M16.5,17c0.83,0,1.5-0.67,1.5-1.5S17.33,14,16.5,14S15,14.67,15,15.5S15.67,17,16.5,17z M7.5,17 c0.83,0,1.5-0.67,1.5-1.5S8.33,14,7.5,14S6,14.67,6,15.5S6.67,17,7.5,17z M4,16c0,2.21,1.79,4,4,4h8c2.21,0,4-1.79,4-4V5 c0-3.5-3.58-4-8-4S4,1.5,4,5V16z"/></svg>`;
-        const trainIcon = `<svg class="transport-icon" viewBox="0 0 24 24"><path d="M12,2c-4,0-8,0.5-8,4v9.5C4,17.43,5.57,19,7.5,19L6,20.5v0.5h12v-0.5L16.5,19c1.93,0,3.5-1.57,3.5-3.5V6 C20,2.5,16,2,12,2z M9,15.5c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5,1.5-1.5s1.5,0.67,1.5,1.5S9.83,15.5,9,15.5z M15,15.5 c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5,1.5-1.5s1.5,0.67,1.5,1.5S15.83,15.5,15,15.5z M18,10H6V7h12V10z"/></svg>`;
 
         function getDelay(sched, real) {
             if (!real || sched === real) return 0;
@@ -201,8 +188,38 @@
                             minutesInfo = minLeft <= 0 ? "(Avgår nu)" : `(Avgår om ${minLeft} min)`;
                         }
 
-                        const currentIcon = isTrain ? trainIcon : busIcon;
-
                         html += `
                             <div class="departure-row ${isTrain ? 'train-row' : 'bus-row'}">
-                                <div class="line-badge ${is
+                                <div class="line-badge ${isTrain ? 'train-badge' : ''}">${line}</div>
+                                <div class="dest-container">
+                                    <div class="dest-row">
+                                        <div class="dest">${destName}</div>
+                                        ${minutesInfo ? `<div class="in-minutes-inline">${minutesInfo}</div>` : ''}
+                                    </div>
+                                    ${viaText ? `<div class="via">${viaText}</div>` : ''}
+                                </div>
+                                <div class="time-box">
+                                    <span class="time">${realTime}</span>
+                                    ${delayMin > 0 ? `<span class="delay">+${delayMin}</span>` : ''}
+                                </div>
+                            </div>`;
+                    });
+                    document.getElementById('board').innerHTML = html;
+                    document.getElementById('debug').innerText = "Uppdaterad: " + new Date().toLocaleTimeString();
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        function clock() {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
+        }
+
+        setInterval(clock, 1000);
+        setInterval(updateBoard, 30000);
+        clock();
+        updateBoard();
+    </script>
+</body>
+</html>
