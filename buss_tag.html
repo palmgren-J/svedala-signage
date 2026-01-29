@@ -2,10 +2,9 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Live - Stor Text</title>
+    <title>Svedala Live - Tågnummer</title>
     <style>
         :root {
-            /* Din önskade orangea färg */
             --skane-orange: #ffb400; 
             --skane-purple: #5a2d81;
             --skane-yellow: #f9d400;
@@ -38,7 +37,6 @@
             margin-bottom: 12px;
             padding: 20px;
             border-radius: 10px;
-            /* Nu orange som standard för bussar */
             border-left: 15px solid var(--skane-orange);
         }
         .train-row { border-left-color: var(--skane-purple); }
@@ -48,7 +46,7 @@
             font-weight: bold;
             padding: 10px 20px;
             border-radius: 8px;
-            min-width: 90px;
+            min-width: 100px; /* Lite bredare för att få plats med 4-siffriga nummer */
             text-align: center;
             margin-right: 25px;
             color: #000;
@@ -113,7 +111,6 @@
                         const dest = dep.direction.toLowerCase();
                         const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
 
-                        // Filterregler
                         if (isTrain) return true;
                         if (line === "141" && dest.includes("malmö")) return true;
                         if (line === "145" && dest.includes("trelleborg")) return true;
@@ -123,18 +120,19 @@
                     });
 
                     filtered.slice(0, 7).forEach(dep => {
-                        const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
-                        const dest = dep.direction.split(',')[0].replace('Svedala station', '').trim();
+                        const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
                         
+                        // Här hämtar vi antingen linjenumret eller tågnumret
+                        const displayNumber = isTrain ? (dep.transportNumber || '---') : (dep.ProductAtStop.displayNumber || dep.transportNumber);
+                        
+                        const dest = dep.direction.split(',')[0].replace('Svedala station', '').trim();
                         const schedTime = dep.time.substring(0, 5);
                         const realTime = (dep.rtTime || dep.time).substring(0, 5);
                         const delayMin = getDelay(schedTime, realTime);
 
-                        const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
-
                         html += `
                             <div class="departure-row ${isTrain ? 'train-row' : ''}">
-                                <div class="line-badge ${isTrain ? 'train' : ''}">${isTrain ? 'Påga' : line}</div>
+                                <div class="line-badge ${isTrain ? 'train' : ''}">${displayNumber}</div>
                                 <div class="dest">${dest}</div>
                                 <div class="time-box">
                                     <span class="time">${realTime}</span>
