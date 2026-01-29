@@ -2,10 +2,11 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Bussar - Malmö/Trelleborg/Lund</title>
+    <title>Svedala Station & Stortorget</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
+            --skane-purple: #5a2d81;
             --skane-yellow: #f9d400;
             --delay-red: #ff4444;
         }
@@ -24,7 +25,7 @@
             align-items: baseline;
             border-bottom: 3px solid var(--skane-yellow);
             padding-bottom: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         h1 { font-size: 1.5rem; margin: 0; text-transform: uppercase; color: #888; }
         .clock { font-size: 2.2rem; font-weight: bold; }
@@ -34,21 +35,28 @@
             align-items: center;
             background: #111;
             margin-bottom: 8px;
-            padding: 15px;
+            padding: 12px;
             border-radius: 6px;
             border-left: 10px solid var(--skane-orange);
         }
+        
+        /* Tågstyrning */
+        .train-row { border-left-color: var(--skane-purple); }
+
         .line-badge {
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             font-weight: bold;
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 4px;
-            min-width: 60px;
+            min-width: 65px;
             text-align: center;
             margin-right: 20px;
             color: #000;
             background-color: var(--skane-orange);
         }
+        
+        .train-badge { background-color: var(--skane-purple); color: white; }
+
         .dest { 
             font-size: 1.6rem; 
             flex-grow: 1; 
@@ -59,21 +67,32 @@
         .time-box { text-align: right; min-width: 110px; }
         .time { font-size: 1.8rem; color: var(--skane-yellow); font-weight: bold; }
         .delay { font-size: 1.1rem; color: var(--delay-red); font-weight: bold; margin-left: 5px; }
+
+        h2 { font-size: 1rem; color: var(--skane-yellow); text-transform: uppercase; margin: 10px 0; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>Busstider i Svedala</h1>
+        <h1>Svedala Live</h1>
         <div class="clock" id="clock">00:00</div>
     </div>
 
-    <div id="board">
-        <div style="text-align:center; font-size: 1.5rem; margin-top: 50px; color: #444;">Filtrerar busslinjer...</div>
+    <div id="train-section">
+        <h2>Pågatåg</h2>
+        <div id="train-board">Laddar tåg...</div>
+    </div>
+
+    <div id="bus-section">
+        <h2>Bussar</h2>
+        <div id="bus-board">Laddar bussar...</div>
     </div>
 
     <script>
         const apiKey = '029d3e62-8c57-4161-a699-e81a51c12931';
+        // Fasta ID:n för att slippa sök-krascher
+        const idStation = '740000158'; 
+        const idStortorget = '740068571';
 
         function getDelay(sched, real) {
             if (!real || sched === real) return 0;
@@ -82,53 +101,71 @@
             return (rH * 60 + rM) - (sH * 60 + sM);
         }
 
-        async function updateBoard() {
+        async function updateData() {
             try {
-                const searchRes = await fetch(`https://api.resrobot.se/v2.1/location.name?input=Svedala Stortorget&format=json&accessId=${apiKey}`);
-                const searchData = await searchRes.json();
-                const extId = searchData.stopLocationOrCoordLocation[0].StopLocation.extId;
+                // Hämta båda platserna (2 timmars varaktighet)
+                const [trainRes, busRes] = await Promise.all([
+                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${idStation}&format=json&accessId=${apiKey}&duration=120`),
+                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${idStortorget}&format=json&accessId=${apiKey}&duration=120`)
+                ]);
 
-                const depRes = await fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${extId}&format=json&accessId=${apiKey}`);
-                const depData = await depRes.json();
+                const trainData = await trainRes.json();
+                const busData = await busRes.json();
 
-                let html = '';
-                if (depData.Departure) {
-                    const filtered = depData.Departure.filter(dep => {
+                // Rendera Tåg
+                let tHtml = '';
+                if (trainData.Departure) {
+                    const trains = trainData.Departure.filter(dep => {
+                        const dest = dep.direction.toLowerCase();
+                        // Endast Pågatåg, inga tåg mot Mora
+                        return (dep.name.includes('Pågatåg') || dep.ProductAtStop.catOutL === "JLT") 
+                                && !dest.includes('mora');
+                    });
+                    
+                    trains.slice(0, 4).forEach(dep => {
+                        tHtml += createRow(dep, 'train');
+                    });
+                }
+                document.getElementById('train-board').innerHTML = tHtml || 'Inga tåg i närtid';
+
+                // Rendera Bussar
+                let bHtml = '';
+                if (busData.Departure) {
+                    const buses = busData.Departure.filter(dep => {
                         const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
                         const dest = dep.direction.toLowerCase();
-                        
-                        // REGEL 1: Linje 141 endast mot Malmö
                         if (line === "141" && dest.includes("malmö")) return true;
-                        
-                        // REGEL 2: Linje 145 endast mot Trelleborg
                         if (line === "145" && dest.includes("trelleborg")) return true;
-                        
-                        // REGEL 3: Linje 165 båda hållen
                         if (line === "165") return true;
-
                         return false;
                     });
 
-                    filtered.slice(0, 10).forEach(dep => {
-                        const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
-                        const dest = dep.direction.split(',')[0].replace('Svedala', '').trim();
-                        const schedTime = dep.time.substring(0, 5);
-                        const realTime = (dep.rtTime || dep.time).substring(0, 5);
-                        const delayMin = getDelay(schedTime, realTime);
-
-                        html += `
-                            <div class="departure-row">
-                                <div class="line-badge">${line}</div>
-                                <div class="dest">${dest}</div>
-                                <div class="time-box">
-                                    <span class="time">${realTime}</span>
-                                    ${delayMin > 0 ? `<span class="delay">+${delayMin}</span>` : ''}
-                                </div>
-                            </div>`;
+                    buses.slice(0, 5).forEach(dep => {
+                        bHtml += createRow(dep, 'bus');
                     });
-                    document.getElementById('board').innerHTML = html || '<div style="text-align:center; padding-top:20px;">Inga valda bussar i närtid</div>';
                 }
+                document.getElementById('bus-board').innerHTML = bHtml || 'Inga valda bussar i närtid';
+
             } catch (e) { console.error(e); }
+        }
+
+        function createRow(dep, type) {
+            const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
+            const isTrain = type === 'train';
+            const dest = dep.direction.split(',')[0].replace('Svedala', '').trim();
+            const schedTime = dep.time.substring(0, 5);
+            const realTime = (dep.rtTime || dep.time).substring(0, 5);
+            const delayMin = getDelay(schedTime, realTime);
+
+            return `
+                <div class="departure-row ${isTrain ? 'train-row' : ''}">
+                    <div class="line-badge ${isTrain ? 'train-badge' : ''}">${isTrain ? 'Påga' : line}</div>
+                    <div class="dest">${dest}</div>
+                    <div class="time-box">
+                        <span class="time">${realTime}</span>
+                        ${delayMin > 0 ? `<span class="delay">+${delayMin}</span>` : ''}
+                    </div>
+                </div>`;
         }
 
         function clock() {
@@ -136,9 +173,9 @@
         }
 
         setInterval(clock, 1000);
-        setInterval(updateBoard, 30000);
+        setInterval(updateData, 45000); // Uppdatera var 45:e sekund
         clock();
-        updateBoard();
+        updateData();
     </script>
 </body>
 </html>
