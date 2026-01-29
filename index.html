@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Station - Tizen Optimerad</title>
+    <title>Svedala Station - Endast Skåne</title>
     <style>
         :root {
             --skane-green: #21ad3b;
@@ -76,7 +76,7 @@
     </div>
 
     <div id="board">
-        <div style="text-align:center; font-size: 40px; margin-top: 100px;">Laddar...</div>
+        <div style="text-align:center; font-size: 40px; margin-top: 100px;">Hämtar tågtider för Svedala...</div>
     </div>
 
     <script>
@@ -84,8 +84,9 @@
 
         function updateBoard() {
             var xhr = new XMLHttpRequest();
-            // Vi använder Svedala Station ID direkt för snabbhet
-            var url = 'https://api.resrobot.se/v2.1/departureBoard?id=740000158&format=json&accessId=' + apiKey;
+            // Vi lägger till filter för Skånetrafiken (operators=279) 
+            // och tvingar API:et att använda det ID som tillhör Svedala i Skåne.
+            var url = 'https://api.resrobot.se/v2.1/departureBoard?id=740000158&format=json&accessId=' + apiKey + '&operators=279';
             
             xhr.open('GET', url, true);
             xhr.onreadystatechange = function () {
@@ -93,15 +94,20 @@
                     var data = JSON.parse(xhr.responseText);
                     var html = '';
                     if (data.Departure) {
-                        var list = data.Departure.slice(0, 10);
-                        for (var i = 0; i < list.length; i++) {
-                            var dep = list[i];
-                            var line = dep.ProductAtStop.displayNumber || dep.transportNumber;
+                        var count = 0;
+                        for (var i = 0; i < data.Departure.length; i++) {
+                            if (count >= 10) break; // Visa max 10 rader
+                            
+                            var dep = data.Departure[i];
                             var dest = dep.direction.split(',')[0].replace('Svedala station', '').trim();
+                            
+                            // FILTRERING: Om destinationen innehåller "Mora" eller "Falun", hoppa över den.
+                            if (dest.indexOf("Mora") !== -1 || dest.indexOf("Falun") !== -1) continue;
+
+                            var line = dep.ProductAtStop.displayNumber || dep.transportNumber;
                             var schedTime = dep.time.substring(0, 5);
                             var realTime = (dep.rtTime || dep.time).substring(0, 5);
                             
-                            // Beräkna försening
                             var delayStr = '';
                             if (dep.rtTime && dep.rtTime !== dep.time) {
                                 var s = schedTime.split(':');
@@ -110,7 +116,7 @@
                                 if (diff > 0) delayStr = '<span class="delay">+' + diff + '</span>';
                             }
 
-                            var isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().indexOf('tåg') !== -1;
+                            var isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().indexOf('pågatåg') !== -1;
                             var rowClass = isTrain ? 'departure-row train-row' : 'departure-row';
                             var badgeClass = isTrain ? 'line-badge train' : 'line-badge bus';
 
@@ -119,6 +125,7 @@
                                     '<div class="dest">' + dest + '</div>' +
                                     '<div class="time-box"><span class="time">' + realTime + '</span>' + delayStr + '</div>' +
                                     '</div>';
+                            count++;
                         }
                         document.getElementById('board').innerHTML = html;
                     }
