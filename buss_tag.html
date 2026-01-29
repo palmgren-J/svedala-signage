@@ -132,13 +132,15 @@
                         const isTrain = (dep.ProductAtStop && dep.ProductAtStop.catOutL === "JLT") || (dep.name && dep.name.toLowerCase().includes('tåg'));
                         const dLow = destName.toLowerCase();
 
-                        // ALLA VIA-REGLER
+                        // UPPDATERAD VIA-LOGIK
                         let viaText = "";
                         if (isTrain) {
                             if (dLow.includes("helsingborg")) {
                                 viaText = "VIA MALMÖ, LUND";
                             } else if (dLow.includes("simrishamn")) {
                                 viaText = "VIA YSTAD";
+                            } else if (dLow.includes("ystad")) {
+                                viaText = "VIA SKURUP";
                             }
                         } else {
                             if (line === "141" && (dLow.includes("malmö") || dLow.includes("södervärn"))) {
