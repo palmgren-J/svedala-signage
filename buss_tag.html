@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Live - Tågnummer</title>
+    <title>Svedala Live - Tågnummer Fix</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
@@ -46,7 +46,7 @@
             font-weight: bold;
             padding: 10px 20px;
             border-radius: 8px;
-            min-width: 100px; /* Lite bredare för att få plats med 4-siffriga nummer */
+            min-width: 110px; 
             text-align: center;
             margin-right: 25px;
             color: #000;
@@ -107,9 +107,9 @@
                 let html = '';
                 if (depData.Departure) {
                     const filtered = depData.Departure.filter(dep => {
-                        const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
+                        const line = dep.ProductAtStop ? dep.ProductAtStop.displayNumber : dep.transportNumber;
                         const dest = dep.direction.toLowerCase();
-                        const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
+                        const isTrain = (dep.ProductAtStop && dep.ProductAtStop.catOutL === "JLT") || dep.name.toLowerCase().includes('tåg');
 
                         if (isTrain) return true;
                         if (line === "141" && dest.includes("malmö")) return true;
@@ -120,10 +120,26 @@
                     });
 
                     filtered.slice(0, 7).forEach(dep => {
-                        const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
+                        const isTrain = (dep.ProductAtStop && dep.ProductAtStop.catOutL === "JLT") || dep.name.toLowerCase().includes('tåg');
                         
-                        // Här hämtar vi antingen linjenumret eller tågnumret
-                        const displayNumber = isTrain ? (dep.transportNumber || '---') : (dep.ProductAtStop.displayNumber || dep.transportNumber);
+                        // FÖRBÄTTRAD LOGIK FÖR TÅGNUMMER:
+                        let displayNumber = "---";
+                        if (isTrain) {
+                            // 1. Testa display-fältet
+                            if (dep.ProductAtStop && dep.ProductAtStop.displayNumber) {
+                                displayNumber = dep.ProductAtStop.displayNumber;
+                            } 
+                            // 2. Om det är tomt, testa transportNumber
+                            else if (dep.transportNumber) {
+                                displayNumber = dep.transportNumber;
+                            }
+                            // 3. Om det också är tomt, extrahera siffror från namnet (t.ex. "Pågatåg 1904")
+                            else if (dep.name) {
+                                displayNumber = dep.name.replace(/\D/g, "");
+                            }
+                        } else {
+                            displayNumber = (dep.ProductAtStop && dep.ProductAtStop.displayNumber) ? dep.ProductAtStop.displayNumber : dep.transportNumber;
+                        }
                         
                         const dest = dep.direction.split(',')[0].replace('Svedala station', '').trim();
                         const schedTime = dep.time.substring(0, 5);
