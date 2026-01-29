@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Live - Via Info</title>
+    <title>Svedala Live - Fullständig Via Info</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
@@ -67,7 +67,8 @@
             color: #ccc; 
             text-transform: uppercase; 
             margin-top: -2px; 
-            font-weight: 900; 
+            font-weight: 600; 
+            letter-spacing: 1.5px;
         }
 
         .time-box { text-align: right; min-width: 150px; }
@@ -113,9 +114,9 @@
                 let html = '';
                 if (depData.Departure) {
                     const filtered = depData.Departure.filter(dep => {
-                        const line = (dep.ProductAtStop && dep.ProductAtStop.displayNumber) || dep.transportNumber;
-                        const dest = dep.direction.toLowerCase();
-                        const isTrain = (dep.ProductAtStop && dep.ProductAtStop.catOutL === "JLT") || dep.name.toLowerCase().includes('tåg');
+                        const line = (dep.ProductAtStop && dep.ProductAtStop.displayNumber) || dep.transportNumber || "";
+                        const dest = (dep.direction || "").toLowerCase();
+                        const isTrain = (dep.ProductAtStop && dep.ProductAtStop.catOutL === "JLT") || (dep.name && dep.name.toLowerCase().includes('tåg'));
 
                         if (isTrain) return true;
                         if (line === "141" && dest.includes("malmö")) return true;
@@ -127,11 +128,11 @@
 
                     filtered.slice(0, 8).forEach(dep => {
                         const line = (dep.ProductAtStop && dep.ProductAtStop.displayNumber) || dep.transportNumber;
-                        let destName = dep.direction.split(',')[0].replace('Svedala station', '').trim();
-                        const isTrain = (dep.ProductAtStop && dep.ProductAtStop.catOutL === "JLT") || dep.name.toLowerCase().includes('tåg');
+                        let destName = (dep.direction || "").split(',')[0].replace('Svedala station', '').trim();
+                        const isTrain = (dep.ProductAtStop && dep.ProductAtStop.catOutL === "JLT") || (dep.name && dep.name.toLowerCase().includes('tåg'));
                         const dLow = destName.toLowerCase();
 
-                        // VIA-LOGIK
+                        // ALLA VIA-REGLER
                         let viaText = "";
                         if (isTrain) {
                             if (dLow.includes("helsingborg")) {
@@ -139,8 +140,14 @@
                             } else if (dLow.includes("simrishamn")) {
                                 viaText = "VIA YSTAD";
                             }
-                        } else if (line === "165" && dLow.includes("lund")) {
-                            viaText = "VIA KLÅGERUP";
+                        } else {
+                            if (line === "141" && (dLow.includes("malmö") || dLow.includes("södervärn"))) {
+                                viaText = "VIA MALMÖ JÄGERSRO";
+                            } else if (line === "145" && dLow.includes("trelleborg")) {
+                                viaText = "VIA ALSTAD, GYLLE";
+                            } else if (line === "165" && dLow.includes("lund")) {
+                                viaText = "VIA KLÅGERUP, STAFFANSTORP";
+                            }
                         }
 
                         const schedTime = dep.time.substring(0, 5);
