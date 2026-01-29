@@ -5,6 +5,7 @@
     <title>Svedala Live - Stor Text</title>
     <style>
         :root {
+            /* Din önskade orangea färg */
             --skane-orange: #ffb400; 
             --skane-purple: #5a2d81;
             --skane-yellow: #f9d400;
@@ -37,9 +38,9 @@
             margin-bottom: 12px;
             padding: 20px;
             border-radius: 10px;
+            /* Nu orange som standard för bussar */
             border-left: 15px solid var(--skane-orange);
         }
-        /* Behåll lila kant för tåg så man ser skillnad */
         .train-row { border-left-color: var(--skane-purple); }
 
         .line-badge {
@@ -96,7 +97,6 @@
 
         async function updateBoard() {
             try {
-                // Vi använder din fungerande sökning
                 const searchRes = await fetch(`https://api.resrobot.se/v2.1/location.name?input=Svedala station&format=json&accessId=${apiKey}`);
                 const searchData = await searchRes.json();
                 if (!searchData.stopLocationOrCoordLocation) return;
@@ -108,18 +108,13 @@
 
                 let html = '';
                 if (depData.Departure) {
-                    // Filtrera enligt dina önskemål
                     const filtered = depData.Departure.filter(dep => {
                         const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
                         const dest = dep.direction.toLowerCase();
                         const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
 
-                        // 1. TÅG: Ta med om det INTE är Dalarna
-                        if (isTrain) {
-                            return !dest.includes("mora") && !dest.includes("rättvik") && !dest.includes("borlänge");
-                        }
-
-                        // 2. BUSS: 141 Malmö, 145 Trelleborg, 165 alla
+                        // Filterregler
+                        if (isTrain) return true;
                         if (line === "141" && dest.includes("malmö")) return true;
                         if (line === "145" && dest.includes("trelleborg")) return true;
                         if (line === "165") return true;
