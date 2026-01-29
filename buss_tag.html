@@ -1,78 +1,92 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Svedala Live - All Trafik</title>
+    <meta charset="utf-8">
+    <title>Svedala Live</title>
     <style>
-        :root { --orange: #ffb400; --purple: #5a2d81; --yellow: #f9d400; }
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; padding: 20px; }
-        .header { border-bottom: 3px solid var(--yellow); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; }
-        .clock { font-size: 2rem; font-weight: bold; }
-        h2 { color: var(--yellow); font-size: 1.2rem; text-transform: uppercase; }
-        .row { display: flex; align-items: center; background: #111; margin-bottom: 8px; padding: 15px; border-radius: 6px; border-left: 10px solid var(--orange); }
-        .train-row { border-left-color: var(--purple); }
-        .badge { font-weight: bold; padding: 5px 10px; border-radius: 4px; min-width: 50px; text-align: center; margin-right: 15px; background: var(--orange); color: #000; }
-        .train-badge { background: var(--purple); color: #fff; }
-        .dest { font-size: 1.5rem; flex-grow: 1; }
-        .time { font-size: 1.7rem; color: var(--yellow); font-weight: bold; }
+        body { background: black; color: white; font-family: sans-serif; padding: 20px; }
+        .header { border-bottom: 2px solid gold; padding-bottom: 10px; margin-bottom: 20px; }
+        .clock { float: right; font-size: 25px; font-weight: bold; }
+        .row { background: #111; padding: 15px; margin-bottom: 5px; border-left: 8px solid #5a2d81; overflow: hidden; }
+        .bus { border-left-color: #ffb400; }
+        .badge { float: left; background: #5a2d81; padding: 5px; min-width: 50px; text-align: center; margin-right: 15px; font-weight: bold; }
+        .bus .badge { background: #ffb400; color: black; }
+        .dest { float: left; font-size: 20px; }
+        .time { float: right; font-size: 20px; color: gold; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>Svedala Live</h1>
         <div id="clock" class="clock">00:00</div>
+        <h1 style="margin:0; font-size: 20px;">SVEDALA LIVE</h1>
     </div>
 
-    <div id="main-board">Laddar all trafik...</div>
+    <div id="board">Söker efter tåg och bussar...</div>
 
-    <script>
-        const key = '029d3e62-8c57-4161-a699-e81a51c12931';
-        const stnId = '740000158'; // Stationen
-        const torgetId = '740068571'; // Stortorget
+    <script type="text/javascript">
+        function update() {
+            // Klocka
+            var now = new Date();
+            document.getElementById('clock').innerHTML = now.getHours() + ":" + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
 
-        async function update() {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
-            
-            try {
-                const [r1, r2] = await Promise.all([
-                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${stnId}&format=json&accessId=${key}`),
-                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${torgetId}&format=json&accessId=${apiKey}`)
-                ]);
+            // Hämta Tåg (Stationen)
+            var xhrT = new XMLHttpRequest();
+            xhrT.open("GET", "https://api.resrobot.se/v2.1/departureBoard?id=740000158&format=json&accessId=029d3e62-8c57-4161-a699-e81a51c12931&duration=120", true);
+            xhrT.onreadystatechange = function() {
+                if (xhrT.readyState == 4 && xhrT.status == 200) {
+                    render(JSON.parse(xhrT.responseText), "train");
+                }
+            };
+            xhrT.send();
 
-                const d1 = await r1.json();
-                const d2 = await r2.json();
-                
-                let combined = [];
-                if (d1.Departure) d1.Departure.forEach(d => combined.push({...d, type:'train'}));
-                if (d2.Departure) d2.Departure.forEach(d => combined.push({...d, type:'bus'}));
-
-                // Sortera efter tid
-                combined.sort((a,b) => (a.time > b.time ? 1 : -1));
-
-                let html = '';
-                combined.slice(0, 12).forEach(d => {
-                    const isTrain = d.type === 'train';
-                    const line = d.ProductAtStop ? d.ProductAtStop.displayNumber : (d.transportNumber || '---');
-                    const time = (d.rtTime || d.time).substring(0, 5);
-                    const dest = d.direction.split(',')[0];
-
-                    html += `
-                        <div class="row ${isTrain ? 'train-row' : ''}">
-                            <div class="badge ${isTrain ? 'train-badge' : ''}">${isTrain ? 'TÅG' : line}</div>
-                            <div class="dest">${dest}</div>
-                            <div class="time">${time}</div>
-                        </div>`;
-                });
-
-                document.getElementById('main-board').innerHTML = html || 'Inga avgångar hittades just nu.';
-            } catch (e) {
-                document.getElementById('main-board').innerHTML = 'Fel vid hämtning. Kontrollera internetanslutning.';
-            }
+            // Hämta Bussar (Stortorget)
+            var xhrB = new XMLHttpRequest();
+            xhrB.open("GET", "https://api.resrobot.se/v2.1/departureBoard?id=740068571&format=json&accessId=029d3e62-8c57-4161-a699-e81a51c12931&duration=120", true);
+            xhrB.onreadystatechange = function() {
+                if (xhrB.readyState == 4 && xhrB.status == 200) {
+                    render(JSON.parse(xhrB.responseText), "bus");
+                }
+            };
+            xhrB.send();
         }
 
-        setInterval(update, 30000);
+        var trainHtml = "";
+        var busHtml = "";
+
+        function render(data, type) {
+            var html = "";
+            if (data.Departure) {
+                var count = 0;
+                for (var i = 0; i < data.Departure.length; i++) {
+                    if (count > 5) break;
+                    var d = data.Departure[i];
+                    var dest = d.direction.split(',')[0];
+                    var line = d.ProductAtStop ? d.ProductAtStop.displayNumber : "---";
+                    
+                    // Filter: Skippa Mora/Dalarna för tåg, och välj rätt bussar
+                    if (type === "train" && (dest.toLowerCase().indexOf("mora") > -1 || dest.toLowerCase().indexOf("falun") > -1)) continue;
+                    if (type === "bus") {
+                        if (line !== "141" && line !== "145" && line !== "165") continue;
+                    }
+
+                    html += '<div class="row ' + (type === "bus" ? "bus" : "") + '">' +
+                            '<div class="badge">' + (type === "train" ? "TÅG" : line) + '</div>' +
+                            '<div class="dest">' + dest + '</div>' +
+                            '<div class="time">' + d.time.substring(0, 5) + '</div>' +
+                            '</div>';
+                    count++;
+                }
+            }
+
+            if (type === "train") trainHtml = html;
+            else busHtml = html;
+
+            document.getElementById('board').innerHTML = trainHtml + busHtml;
+        }
+
         update();
+        setInterval(update, 60000);
     </script>
 </body>
 </html>
