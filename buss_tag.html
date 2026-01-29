@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Live - Tågnummer Fix</title>
+    <title>Svedala Live - Stor Text</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
@@ -37,16 +37,16 @@
             margin-bottom: 12px;
             padding: 20px;
             border-radius: 10px;
-            border-left: 15px solid var(--skane-orange);
+            border-left: 15px solid var(--skane-orange); /* Orange som standard */
         }
         .train-row { border-left-color: var(--skane-purple); }
 
         .line-badge {
             font-size: 2.2rem;
             font-weight: bold;
-            padding: 10px 20px;
+            padding: 10px 15px;
             border-radius: 8px;
-            min-width: 110px; 
+            min-width: 100px;
             text-align: center;
             margin-right: 25px;
             color: #000;
@@ -78,7 +78,7 @@
     </div>
 
     <div id="board">
-        <div style="text-align:center; font-size: 2rem; margin-top: 50px; color: #444;">Uppdaterar...</div>
+        <div style="text-align:center; font-size: 2rem; margin-top: 50px; color: #444;">Hämtar data...</div>
     </div>
     
     <div class="status-bar" id="debug">System OK</div>
@@ -106,10 +106,11 @@
 
                 let html = '';
                 if (depData.Departure) {
+                    // Filtrering: Tåg + de specifika bussarna
                     const filtered = depData.Departure.filter(dep => {
-                        const line = dep.ProductAtStop ? dep.ProductAtStop.displayNumber : dep.transportNumber;
+                        const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
                         const dest = dep.direction.toLowerCase();
-                        const isTrain = (dep.ProductAtStop && dep.ProductAtStop.catOutL === "JLT") || dep.name.toLowerCase().includes('tåg');
+                        const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
 
                         if (isTrain) return true;
                         if (line === "141" && dest.includes("malmö")) return true;
@@ -119,36 +120,19 @@
                         return false;
                     });
 
-                    filtered.slice(0, 7).forEach(dep => {
-                        const isTrain = (dep.ProductAtStop && dep.ProductAtStop.catOutL === "JLT") || dep.name.toLowerCase().includes('tåg');
-                        
-                        // FÖRBÄTTRAD LOGIK FÖR TÅGNUMMER:
-                        let displayNumber = "---";
-                        if (isTrain) {
-                            // 1. Testa display-fältet
-                            if (dep.ProductAtStop && dep.ProductAtStop.displayNumber) {
-                                displayNumber = dep.ProductAtStop.displayNumber;
-                            } 
-                            // 2. Om det är tomt, testa transportNumber
-                            else if (dep.transportNumber) {
-                                displayNumber = dep.transportNumber;
-                            }
-                            // 3. Om det också är tomt, extrahera siffror från namnet (t.ex. "Pågatåg 1904")
-                            else if (dep.name) {
-                                displayNumber = dep.name.replace(/\D/g, "");
-                            }
-                        } else {
-                            displayNumber = (dep.ProductAtStop && dep.ProductAtStop.displayNumber) ? dep.ProductAtStop.displayNumber : dep.transportNumber;
-                        }
-                        
+                    filtered.slice(0, 8).forEach(dep => {
+                        const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
                         const dest = dep.direction.split(',')[0].replace('Svedala station', '').trim();
+                        
                         const schedTime = dep.time.substring(0, 5);
                         const realTime = (dep.rtTime || dep.time).substring(0, 5);
                         const delayMin = getDelay(schedTime, realTime);
 
+                        const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
+
                         html += `
                             <div class="departure-row ${isTrain ? 'train-row' : ''}">
-                                <div class="line-badge ${isTrain ? 'train' : ''}">${displayNumber}</div>
+                                <div class="line-badge ${isTrain ? 'train' : ''}">${line}</div>
                                 <div class="dest">${dest}</div>
                                 <div class="time-box">
                                     <span class="time">${realTime}</span>
@@ -156,7 +140,7 @@
                                 </div>
                             </div>`;
                     });
-                    document.getElementById('board').innerHTML = html || '<div style="text-align:center;font-size:2rem;margin-top:50px;">Inga valda avgångar just nu</div>';
+                    document.getElementById('board').innerHTML = html;
                     document.getElementById('debug').innerText = "Uppdaterad: " + new Date().toLocaleTimeString();
                 }
             } catch (error) {
