@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Live - Stor Text</title>
+    <title>Svedala Live - Via Malmö</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
@@ -37,7 +37,7 @@
             margin-bottom: 12px;
             padding: 20px;
             border-radius: 10px;
-            border-left: 15px solid var(--skane-orange); /* Orange som standard */
+            border-left: 15px solid var(--skane-orange);
         }
         .train-row { border-left-color: var(--skane-purple); }
 
@@ -54,14 +54,15 @@
         }
         .train { background-color: var(--skane-purple); color: white; }
 
+        .dest-container { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .dest { 
             font-size: 2.5rem; 
-            flex-grow: 1; 
             white-space: nowrap; 
             overflow: hidden; 
             text-overflow: ellipsis; 
             font-weight: 500;
         }
+        .via { font-size: 1.2rem; color: #aaa; text-transform: uppercase; margin-top: -5px; }
 
         .time-box { text-align: right; min-width: 150px; }
         .time { font-size: 2.8rem; color: var(--skane-yellow); font-weight: bold; }
@@ -106,7 +107,6 @@
 
                 let html = '';
                 if (depData.Departure) {
-                    // Filtrering: Tåg + de specifika bussarna
                     const filtered = depData.Departure.filter(dep => {
                         const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
                         const dest = dep.direction.toLowerCase();
@@ -122,18 +122,30 @@
 
                     filtered.slice(0, 8).forEach(dep => {
                         const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
-                        const dest = dep.direction.split(',')[0].replace('Svedala station', '').trim();
+                        let destName = dep.direction.split(',')[0].replace('Svedala station', '').trim();
                         
+                        const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
+                        
+                        // LOGIK FÖR "VIA MALMÖ"
+                        let viaText = "";
+                        if (isTrain) {
+                            const dLow = destName.toLowerCase();
+                            if (dLow.includes("helsingborg") || dLow.includes("malmö") || dLow.includes("hyllie")) {
+                                viaText = "via Malmö";
+                            }
+                        }
+
                         const schedTime = dep.time.substring(0, 5);
                         const realTime = (dep.rtTime || dep.time).substring(0, 5);
                         const delayMin = getDelay(schedTime, realTime);
 
-                        const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
-
                         html += `
                             <div class="departure-row ${isTrain ? 'train-row' : ''}">
                                 <div class="line-badge ${isTrain ? 'train' : ''}">${line}</div>
-                                <div class="dest">${dest}</div>
+                                <div class="dest-container">
+                                    <div class="dest">${destName}</div>
+                                    ${viaText ? `<div class="via">${viaText}</div>` : ''}
+                                </div>
                                 <div class="time-box">
                                     <span class="time">${realTime}</span>
                                     ${delayMin > 0 ? `<span class="delay">+${delayMin}</span>` : ''}
