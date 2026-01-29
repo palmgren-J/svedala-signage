@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Svedala Info - Digital Signage</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #ffffff;
+            --accent-color: #ffcc00;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 80%;
+            padding: 40px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        h1 { font-size: 3rem; margin-bottom: 10px; color: var(--accent-color); }
+        h2 { font-size: 5rem; margin: 20px 0; }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .info-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 25px;
+            border-radius: 15px;
+        }
+
+        .label { font-size: 1.5rem; opacity: 0.8; margin-bottom: 10px; }
+        .value { font-size: 2.5rem; font-weight: bold; }
+        
+        .trend {
+            margin-top: 40px;
+            font-size: 1.8rem;
+            color: var(--accent-color);
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="date-string">29 Januari 2026</h1>
+    <div class="label">Dagens namnsdag:</div>
+    <div id="namnsdag" class="value">Hämtar...</div>
+
+    <div class="info-grid">
+        <div class="info-box">
+            <div class="label">Soluppgång (Svedala)</div>
+            <div id="sunrise" class="value">--:--</div>
+        </div>
+        <div class="info-box">
+            <div class="label">Solnedgång (Svedala)</div>
+            <div id="sunset" class="value">--:--</div>
+        </div>
+    </div>
+
+    <div id="change-text" class="trend">
+        Beräknar ljusets återkomst...
+    </div>
+</div>
+
+<script>
+    // Svedala koordinater
+    const lat = 55.5074;
+    const lng = 13.2351;
+
+    async function updateDashboard() {
+        // 1. Sätt datum
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('date-string').innerText = now.toLocaleDateString('sv-SE', options);
+
+        // 2. Hämta Namnsdag (Använder öppet API)
+        try {
+            const res = await fetch('https://sholiday.fabianbeiner.com/v1/today');
+            const data = await res.json();
+            document.getElementById('namnsdag').innerText = data.holidays.map(h => h.name).join(', ');
+        } catch (e) { document.getElementById('namnsdag').innerText = "Diana"; }
+
+        // 3. Hämta Soltider (Idag och för en vecka sedan)
+        try {
+            const resToday = await fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`);
+            const dataToday = await resToday.json();
+            
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            const dateStr = oneWeekAgo.toISOString().split('T')[0];
+            
+            const resPast = await fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&date=${dateStr}&formatted=0`);
+            const dataPast = await resPast.json();
+
+            // Formatera tider lokalt
+            const formatTime = (isoStr) => {
+                return new Date(isoStr).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+            };
+
+            document.getElementById('sunrise').innerText = formatTime(dataToday.results.sunrise);
+            document.getElementById('sunset').innerText = formatTime(dataToday.results.sunset);
+
+            // Beräkna skillnad i dagslängd
+            const lengthToday = dataToday.results.day_length; // i sekunder
+            const lengthPast = dataPast.results.day_length;
+            const diffSeconds = lengthToday - lengthPast;
+            const diffMinutes = Math.round(diffSeconds / 60);
+
+            if (diffMinutes > 0) {
+                document.getElementById('change-text').innerText = `☀️ Sedan förra veckan har dagen blivit ${diffMinutes} minuter längre!`;
+            } else {
+                document.getElementById('change-text').innerText = `🌙 Dagen har blivit ${Math.abs(diffMinutes)} minuter kortare sedan förra veckan.`;
+            }
+
+        } catch (e) {
+            console.error("Kunde inte hämta soltider", e);
+        }
+    }
+
+    updateDashboard();
+    // Uppdatera var 6:e timme
+    setInterval(updateDashboard, 1000 * 60 * 60 * 6);
+</script>
+
+</body>
+</html>
