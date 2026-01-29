@@ -3,49 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Svedala Info - Vintertema</title>
+    <title>Svedala Info - Komplett</title>
     <style>
         :root {
-            /* Färgskala från bilderna */
-            --bg-color: #0099db;
-            --bg-gradient: radial-gradient(circle at center, #00b4f1 0%, #007bbd 100%);
-            --panel-bg: rgba(0, 43, 92, 0.6); /* Mörkblå transparent panel som på bilderna */
+            --bg-blue: #009ce0;
+            --card-blue: #004a80;
             --text-white: #ffffff;
-            --accent-color: #ffcc00;
-            --footer-bg: rgba(0, 0, 0, 0.2);
+            --accent-yellow: #ffcc00;
+            --footer-dark: rgba(0, 0, 0, 0.2);
         }
 
         body {
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: var(--bg-gradient);
+            background-image: radial-gradient(circle at center, #00b4f1 0%, #007bbd 100%);
             color: var(--text-white);
             margin: 0;
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            position: relative;
-        }
-
-        /* Dekorativa snöflingor i hörnen (likt bild 1 och 3) */
-        body::before {
-            content: '❄';
-            position: absolute;
-            top: -20px;
-            left: 20px;
-            font-size: 15rem;
-            opacity: 0.1;
-            z-index: 0;
-        }
-
-        body::after {
-            content: '❄';
-            position: absolute;
-            bottom: 60px;
-            right: 20px;
-            font-size: 10rem;
-            opacity: 0.1;
-            z-index: 0;
         }
 
         .main-content {
@@ -55,160 +31,166 @@
             justify-content: center;
             align-items: center;
             z-index: 1;
-            padding: 20px;
         }
 
-        .header-title {
+        .header-text {
             font-size: 3.5rem;
             font-weight: 700;
-            margin-bottom: 30px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .info-panel {
-            background: var(--panel-bg);
-            width: 90%;
-            max-width: 1000px;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .date-row {
-            border-bottom: 2px solid rgba(255,255,255,0.2);
-            padding-bottom: 10px;
             margin-bottom: 25px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .info-card {
+            background-color: var(--card-blue);
+            width: 85%;
+            max-width: 1000px;
+            padding: 45px;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
             text-align: left;
         }
 
-        .weekday-label {
-            font-size: 1.5rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-weight: bold;
-            display: block;
+        .date-section {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
         }
 
-        .full-date {
-            font-size: 2.5rem;
-            opacity: 0.9;
-        }
+        .weekday { font-size: 1.6rem; text-transform: uppercase; font-weight: 800; letter-spacing: 2px; }
+        .full-date { font-size: 2.2rem; opacity: 0.9; margin-left: 10px; }
 
-        .namnsdag-display {
-            text-align: left;
-            margin: 30px 0;
-        }
-
-        .label { 
-            font-size: 1.2rem; 
-            text-transform: uppercase; 
-            letter-spacing: 2px; 
-            opacity: 0.8;
-            margin-bottom: 5px;
-        }
-
+        .label { font-size: 1.1rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.7; }
+        
+        /* Den stora vita texten för namnet */
         .name-value {
-            font-size: 5rem;
+            font-size: 5.5rem;
             font-weight: 800;
-            line-height: 1;
+            margin: 10px 0 35px 0;
+            line-height: 1.1;
+            color: #ffffff;
         }
 
         .sun-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            margin-top: 40px;
-            text-align: left;
+            gap: 20px;
         }
 
-        .sun-box .time {
-            font-size: 3rem;
-            font-weight: 700;
-            color: var(--accent-color);
+        .sun-time { font-size: 3.5rem; font-weight: 700; color: var(--accent-yellow); }
+
+        /* Trend-texten om dagslängd */
+        .trend-text {
+            margin-top: 25px;
+            font-size: 1.8rem;
+            font-weight: 600;
+            opacity: 0.9;
         }
 
-        /* Sidfot (likt bild 1) */
         .footer {
-            height: 100px;
-            background: var(--footer-bg);
+            height: 110px;
+            background: var(--footer-dark);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 40px;
-            font-size: 1.5rem;
-            backdrop-filter: blur(5px);
+            padding: 0 60px;
         }
 
-        .kommuntryck {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .kommuntryck img {
-            height: 60px;
-        }
+        #live-time { font-size: 3.5rem; font-weight: 800; }
+        #live-date { font-size: 1.5rem; opacity: 0.8; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
     <div class="main-content">
-        <div class="header-title">I Svedala idag...</div>
+        <div class="header-text">I Svedala idag...</div>
 
-        <div class="info-panel">
-            <div class="date-row">
-                <span id="weekday" class="weekday-label">Laddar...</span>
-                <span id="date-string" class="full-date">-- ---</span>
+        <div class="info-card">
+            <div class="date-section">
+                <span id="weekday" class="weekday">...</span>
+                <span id="date-string" class="full-date"></span>
             </div>
 
-            <div class="namnsdag-display">
-                <div class="label">Namnsdag</div>
-                <div id="namnsdag" class="name-value">...</div>
-            </div>
+            <div class="label">Namnsdag</div>
+            <div id="namnsdag" class="name-value">...</div>
 
             <div class="sun-grid">
                 <div class="sun-box">
                     <div class="label">Soluppgång</div>
-                    <div id="sunrise" class="time">--:--</div>
+                    <div id="sunrise" class="sun-time">--:--</div>
                 </div>
                 <div class="sun-box">
                     <div class="label">Solnedgång</div>
-                    <div id="sunset" class="time">--:--</div>
+                    <div id="sunset" class="sun-time">--:--</div>
                 </div>
             </div>
+            
+            <div id="change-text" class="trend-text"></div>
         </div>
-        
-        <div id="change-text" style="margin-top: 20px; font-size: 1.5rem; opacity: 0.8;"></div>
     </div>
 
     <div class="footer">
         <div>
-            <span id="live-clock" style="font-weight: bold;">00:00</span>
-            <span style="margin-left: 10px; opacity: 0.8;">29 JAN</span>
+            <div id="live-time">00:00</div>
+            <div id="live-date">-- ---</div>
         </div>
-        <div class="kommuntryck">
-            <span style="text-transform: uppercase; letter-spacing: 1px;">Svedala kommun</span>
-            <div style="width: 40px; height: 50px; background: #e30613; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 10px;">LOGO</div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span style="font-size: 1.5rem; letter-spacing: 1px;">SVEDALA KOMMUN</span>
+            <div style="width: 40px; height: 50px; background: #e30613; border-radius: 4px;"></div>
         </div>
     </div>
 
 <script>
-    // NAMNSDAGSLISTA (Förkortad version för exemplet, behåll din långa lista här)
-    const namnsdagar = { "1-29": "Diana", "1-30": "Gunilla, Gunhild", "1-31": "Ivar, Joar", "2-1": "Max", "2-2": "Kyndelsmässodagen" /* ...osv */ };
+    // Klistra in din stora namnsdagslista här (kopiera från din förra kod)
+    const namnsdagar = {
+        "1-1": "Nyårsdagen", "1-2": "Svea", /* ... behåll hela din lista här ... */
+        "1-29": "Diana", "1-30": "Gunilla, Gunhild", "1-31": "Ivar, Joar"
+    };
 
     const lat = 55.5074;
     const lng = 13.2351;
 
-    function updateClock() {
-        const now = new Date();
-        document.getElementById('live-clock').innerText = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-    }
-
     async function updateData() {
         const now = new Date();
-        const month = now.getMonth() + 1;
-        const date = now.getDate();
-        const key = `${month}-${date}`;
+        const key = `${now.getMonth() + 1}-${now.getDate()}`;
 
-        document.getElementById('weekday').innerText = now.
+        // Grunduppgifter
+        document.getElementById('weekday').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long' }).toUpperCase();
+        document.getElementById('date-string').innerText = now.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' });
+        document.getElementById('namnsdag').innerText = namnsdagar[key] || "–";
+        document.getElementById('live-date').innerText = now.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).toUpperCase();
+
+        try {
+            // Hämta dagens soltider
+            const resToday = await fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`);
+            const dataToday = await resToday.json();
+            
+            // Hämta förra veckans soltider för att räkna ut förändring
+            const pastDate = new Date();
+            pastDate.setDate(pastDate.getDate() - 7);
+            const resPast = await fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&date=${pastDate.toISOString().split('T')[0]}&formatted=0`);
+            const dataPast = await resPast.json();
+
+            const formatTime = (iso) => new Date(iso).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+
+            document.getElementById('sunrise').innerText = formatTime(dataToday.results.sunrise);
+            document.getElementById('sunset').innerText = formatTime(dataToday.results.sunset);
+
+            // Beräkna trenden (minuter ljusare/mörkare)
+            const diff = Math.round((dataToday.results.day_length - dataPast.results.day_length) / 60);
+            const trend = document.getElementById('change-text');
+            if (diff > 0) trend.innerHTML = `☀️ Dagen är <strong>${diff} minuter längre</strong> än förra veckan`;
+            else if (diff < 0) trend.innerHTML = `🌙 Dagen är <strong>${Math.abs(diff)} minuter kortare</strong> än förra veckan`;
+        } catch (e) { console.error("Soldata kunde inte hämtas"); }
+    }
+
+    function updateClock() {
+        document.getElementById('live-time').innerText = new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    updateData();
+    updateClock();
+    setInterval(updateClock, 1000 * 30);
+    setInterval(updateData, 1000 * 60 * 60 * 6);
+</script>
+</body>
+</html>
