@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Live - Endast Skåne</title>
+    <title>Svedala Live - Skåne-version</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
@@ -25,7 +25,7 @@
             margin-bottom: 15px;
         }
         .clock { font-size: 2.2rem; font-weight: bold; }
-        h2 { font-size: 1.2rem; color: var(--skane-yellow); text-transform: uppercase; margin: 15px 0 10px 0; border-left: 5px solid var(--skane-yellow); padding-left: 10px; }
+        h2 { font-size: 1.2rem; color: var(--skane-yellow); text-transform: uppercase; margin: 20px 0 10px 0; border-left: 5px solid var(--skane-yellow); padding-left: 10px; }
 
         .row {
             display: flex;
@@ -63,35 +63,41 @@
     </div>
 
     <div id="board">
-        <h2>Pågatåg</h2>
-        <div id="train-list">Laddar tåg...</div>
+        <h2>Pågatåg (Stationen)</h2>
+        <div id="train-list">Ansluter till Skånetrafiken...</div>
         
-        <h2>Bussar</h2>
-        <div id="bus-list">Laddar bussar...</div>
+        <h2>Bussar (Stortorget)</h2>
+        <div id="bus-list">Ansluter till Skånetrafiken...</div>
     </div>
 
     <script>
         const apiKey = '029d3e62-8c57-4161-a699-e81a51c12931';
         
-        // DESSA ID-NUMMER ÄR UNIKA FÖR SKÅNE:
-        const ID_STATION = '740000158';    // Svedala Station (Skåne)
-        const ID_STORTORGET = '740068571'; // Svedala Stortorget (Skåne)
+        // Hårdkodade ID:n för att tvinga systemet till Skåne
+        const ID_STATION_SKANE = '740000158';    
+        const ID_STORTORGET_SKANE = '740068571'; 
 
         async function update() {
             try {
-                // Hämta data direkt via ID för att undvika Dalarna-förvirring
+                // Hämta båda platserna separat med de exakta ID-numren
                 const [tRes, bRes] = await Promise.all([
-                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${ID_STATION}&format=json&accessId=${apiKey}&duration=120`),
-                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${ID_STORTORGET}&format=json&accessId=${apiKey}&duration=120`)
+                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${ID_STATION_SKANE}&format=json&accessId=${apiKey}&duration=60`),
+                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${ID_STORTORGET_SKANE}&format=json&accessId=${apiKey}&duration=60`)
                 ]);
 
                 const tData = await tRes.json();
                 const bData = await bRes.json();
 
-                // Rendera Tåg
+                // 1. Rendera Pågatåg
                 let tHtml = '';
                 if (tData.Departure) {
-                    tData.Departure.slice(0, 4).forEach(d => {
+                    // Vi rensar bort allt som mot förmodan skulle innehålla Mora/Falun/Rättvik
+                    const skaneTrains = tData.Departure.filter(d => {
+                        const dStr = d.direction.toLowerCase();
+                        return !dStr.includes("mora") && !dStr.includes("falun") && !dStr.includes("rättvik");
+                    }).slice(0, 4);
+
+                    skaneTrains.forEach(d => {
                         tHtml += `<div class="row train-row">
                             <div class="badge train-badge">Påga</div>
                             <div class="dest">${d.direction.split(',')[0]}</div>
@@ -99,9 +105,9 @@
                         </div>`;
                     });
                 }
-                document.getElementById('train-list').innerHTML = tHtml || "Inga tåg just nu";
+                document.getElementById('train-list').innerHTML = tHtml || "Inga tåg hittades i Svedala (Skåne)";
 
-                // Rendera Bussar (med dina filter 141, 145, 165)
+                // 2. Rendera Bussar (141, 145, 165)
                 let bHtml = '';
                 if (bData.Departure) {
                     const filteredBuses = bData.Departure.filter(d => {
@@ -122,9 +128,12 @@
                         </div>`;
                     });
                 }
-                document.getElementById('bus-list').innerHTML = bHtml || "Inga valda bussar just nu";
+                document.getElementById('bus-list').innerHTML = bHtml || "Inga valda bussar hittades i Svedala (Skåne)";
 
-            } catch (e) { console.error("Fel:", e); }
+            } catch (e) { 
+                console.error(e);
+                document.getElementById('board').innerHTML = "<p style='color:red'>Kunde inte hämta data. Kontrollera internet.</p>";
+            }
         }
 
         function clock() {
@@ -132,7 +141,7 @@
         }
 
         setInterval(clock, 1000);
-        setInterval(update, 30000);
+        setInterval(update, 45000); // Uppdatera var 45:e sekund
         clock();
         update();
     </script>
