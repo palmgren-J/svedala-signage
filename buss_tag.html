@@ -88,4 +88,65 @@
             try {
                 // Hämta båda i ett anrop för att spara på API-kvoten
                 const [tRes, bRes] = await Promise.all([
-                    fetch(`
+                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=740000158&format=json&accessId=${apiKey}&duration=120`),
+                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=740068571&format=json&accessId=${apiKey}&duration=120`)
+                ]);
+
+                const tData = await tRes.json();
+                const bData = await bRes.json();
+
+                render(tData.Departure, 'train-board', 'train');
+                render(bData.Departure, 'bus-board', 'bus');
+                document.getElementById('debug').innerText = "Uppdaterat: " + now.toLocaleTimeString();
+
+            } catch (e) {
+                document.getElementById('debug').innerText = "Anslutningsfel - försök pågår...";
+            }
+        }
+
+        function render(deps, boardId, type) {
+            let html = '';
+            if (deps && deps.length > 0) {
+                const filtered = deps.filter(d => {
+                    const line = (d.ProductAtStop ? d.ProductAtStop.displayNumber : d.transportNumber) || '';
+                    const dest = (d.direction || '').toLowerCase();
+                    const name = (d.name || '').toLowerCase();
+
+                    // TÅGFILTER: Endast Pågatåg, och ALDRIG Mora/Dalarna
+                    if (type === 'train') {
+                        const isPagatag = name.includes('pågatåg') || d.ProductAtStop.catOutL === "JLT";
+                        const isNotDalarna = !dest.includes('mora') && !dest.includes('falun') && !dest.includes('gävle');
+                        return isPagatag && isNotDalarna;
+                    }
+
+                    // BUSSFILTER: Endast dina specifika linjer och riktningar
+                    if (type === 'bus') {
+                        if (line === '141' && dest.includes('malmö')) return true;
+                        if (line === '145' && dest.includes('trelleborg')) return true;
+                        if (line === '165') return true;
+                        return false;
+                    }
+                    return false;
+                });
+
+                filtered.slice(0, 5).forEach(d => {
+                    const line = (d.ProductAtStop ? d.ProductAtStop.displayNumber : d.transportNumber);
+                    const time = (d.rtTime || d.time).substring(0, 5);
+                    const cleanDest = d.direction.split(',')[0].replace('Svedala', '').trim();
+
+                    html += `
+                        <div class="row ${type === 'bus' ? 'bus-row' : 'train-row'}">
+                            <div class="badge ${type === 'bus' ? 'bus-badge' : 'train-badge'}">${line}</div>
+                            <div class="dest">${cleanDest}</div>
+                            <div class="time">${time}</div>
+                        </div>`;
+                });
+            }
+            document.getElementById(boardId).innerHTML = html || '<div style="color:#444; padding:15px;">Inga avgångar hittades</div>';
+        }
+
+        setInterval(update, 45000);
+        update();
+    </script>
+</body>
+</html>
