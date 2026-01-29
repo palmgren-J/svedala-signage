@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Live - Buss & Tåg</title>
+    <title>Svedala Live - Fixad Version</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
@@ -13,142 +13,118 @@
         body {
             background-color: #000;
             color: white;
-            font-family: 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 15px;
             overflow: hidden;
             height: 100vh;
         }
         .header {
             display: flex;
             justify-content: space-between;
-            align-items: baseline;
-            border-bottom: 3px solid var(--skane-yellow);
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+            align-items: center;
+            border-bottom: 2px solid var(--skane-yellow);
+            padding-bottom: 5px;
+            margin-bottom: 10px;
         }
-        h1 { font-size: 1.5rem; margin: 0; text-transform: uppercase; color: #888; }
-        .clock { font-size: 2.2rem; font-weight: bold; }
+        .clock { font-size: 2rem; font-weight: bold; }
+        
+        h2 { 
+            font-size: 1.1rem; 
+            margin: 15px 0 8px 0; 
+            color: var(--skane-yellow); 
+            text-transform: uppercase;
+            border-left: 4px solid var(--skane-yellow);
+            padding-left: 10px;
+        }
 
-        .departure-row {
+        .row {
             display: flex;
             align-items: center;
             background: #111;
-            margin-bottom: 8px;
-            padding: 12px;
-            border-radius: 6px;
-            border-left: 10px solid var(--skane-orange);
-        }
-        
-        /* Specifik stil för tåg */
-        .train-row { border-left-color: var(--skane-purple); }
-
-        .line-badge {
-            font-size: 1.3rem;
-            font-weight: bold;
-            padding: 5px 10px;
+            margin-bottom: 5px;
+            padding: 10px;
             border-radius: 4px;
-            min-width: 60px;
-            text-align: center;
-            margin-right: 20px;
-            color: #000;
-            background-color: var(--skane-orange);
         }
         
-        .train-badge {
-            background-color: var(--skane-purple);
-            color: white;
-        }
+        .train-row { border-left: 8px solid var(--skane-purple); }
+        .bus-row { border-left: 8px solid var(--skane-orange); }
 
-        .dest { 
-            font-size: 1.5rem; 
-            flex-grow: 1; 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
+        .badge {
+            font-size: 1.1rem;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 3px;
+            min-width: 45px;
+            text-align: center;
+            margin-right: 12px;
         }
+        .train-badge { background-color: var(--skane-purple); color: white; }
+        .bus-badge { background-color: var(--skane-orange); color: #000; }
 
-        .time-box { text-align: right; min-width: 105px; }
-        .time { font-size: 1.6rem; color: var(--skane-yellow); font-weight: bold; }
-        .delay { font-size: 1rem; color: var(--delay-red); font-weight: bold; margin-left: 5px; }
-
-        .section-title {
-            font-size: 1rem;
-            color: var(--skane-yellow);
-            text-transform: uppercase;
-            margin: 15px 0 10px 0;
-            letter-spacing: 1px;
-        }
+        .dest { font-size: 1.2rem; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .time { font-size: 1.3rem; color: var(--skane-yellow); font-weight: bold; min-width: 60px; text-align: right; }
+        .status { font-size: 0.7rem; color: #333; text-align: center; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>Svedala Station & Stortorg</h1>
-        <div class="clock" id="clock">00:00</div>
+        <h1 style="font-size: 1.2rem; color: #888; margin: 0;">SVEDALA LIVE</h1>
+        <div id="clock" class="clock">00:00</div>
     </div>
 
-    <div id="board">
-        <div style="text-align:center; font-size: 1.5rem; margin-top: 50px; color: #444;">Laddar trafikdata...</div>
-    </div>
+    <section>
+        <h2>Pågatåg (Stationen)</h2>
+        <div id="train-board">Söker tåg...</div>
+    </section>
+
+    <section>
+        <h2>Bussar (Stortorget)</h2>
+        <div id="bus-board">Söker bussar...</div>
+    </section>
+
+    <div class="status" id="debug">Systemet uppdateras...</div>
 
     <script>
         const apiKey = '029d3e62-8c57-4161-a699-e81a51c12931';
-        // Fasta IDn för att undvika sökfel
-        const idStortorget = '740068571'; 
-        const idStationen = '740000158';
 
-        function getDelay(sched, real) {
-            if (!real || sched === real) return 0;
-            const [sH, sM] = sched.split(':').map(Number);
-            const [rH, rM] = real.split(':').map(Number);
-            const diff = (rH * 60 + rM) - (sH * 60 + sM);
-            return diff > 0 ? diff : 0;
+        async function fetchData(id) {
+            try {
+                const response = await fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${id}&format=json&accessId=${apiKey}&duration=120&cb=${Date.now()}`);
+                return await response.json();
+            } catch (e) { return null; }
         }
 
-        async function updateBoard() {
-            try {
-                // Hämta både bussar och tåg (2 timmar framåt)
-                const [busRes, trainRes] = await Promise.all([
-                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${idStortorget}&format=json&accessId=${apiKey}&duration=120`),
-                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${idStationen}&format=json&accessId=${apiKey}&duration=120`)
-                ]);
+        async function update() {
+            // Svedala Station: 740000158, Svedala Stortorget: 740068571
+            const tData = await fetchData('740000158');
+            const bData = await fetchData('740068571');
 
-                const busData = await busRes.json();
-                const trainData = await trainRes.json();
+            // Rendera tåg
+            let tHtml = '';
+            if (tData && tData.Departure) {
+                tData.Departure.filter(d => {
+                    const dest = (d.direction || "").toLowerCase();
+                    return dest.indexOf("mora") === -1 && dest.indexOf("falun") === -1;
+                }).slice(0, 5).forEach(d => {
+                    tHtml += createRow(d, 'train');
+                });
+            }
+            document.getElementById('train-board').innerHTML = tHtml || "Inga tåg hittades (kontrollera trafikläget)";
 
-                let allDepartures = [];
-
-                // Bearbeta bussar
-                if (busData.Departure) {
-                    busData.Departure.forEach(dep => {
-                        const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
-                        const dest = dep.direction.toLowerCase();
-                        
-                        let shouldInclude = false;
-                        if (line === "141" && dest.includes("malmö")) shouldInclude = true;
-                        if (line === "145" && dest.includes("trelleborg")) shouldInclude = true;
-                        if (line === "165") shouldInclude = true;
-
-                        if (shouldInclude) {
-                            allDepartures.push({ ...dep, type: 'bus' });
-                        }
-                    });
-                }
-
-                // Bearbeta tåg
-                if (trainData.Departure) {
-                    trainData.Departure.forEach(dep => {
-                        const dest = dep.direction.toLowerCase();
-                        const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('pågatåg');
-                        const isNotDalarna = !dest.includes("mora") && !dest.includes("falun");
-
-                        if (isTrain && isNotDalarna) {
-                            allDepartures.push({ ...dep, type: 'train' });
-                        }
-                    });
-                }
-
-                // Sortera allt på tid
-                allDepartures.sort((a, b) => {
-                    const timeA = (a.rtTime || a.time
+            // Rendera bussar
+            let bHtml = '';
+            if (bData && bData.Departure) {
+                bData.Departure.filter(d => {
+                    const line = (d.ProductAtStop ? d.ProductAtStop.displayNumber : d.transportNumber) || "";
+                    const dest = (d.direction || "").toLowerCase();
+                    if (line === "141" && dest.indexOf("malmö") !== -1) return true;
+                    if (line === "145" && dest.indexOf("trelleborg") !== -1) return true;
+                    if (line === "165") return true;
+                    return false;
+                }).slice(0, 8).forEach(d => {
+                    bHtml += createRow(d, 'bus');
+                });
+            }
+            document.getElementById('bus-
