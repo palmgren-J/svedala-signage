@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Live - Via Malmö</title>
+    <title>Svedala Live - Via Info</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
@@ -62,7 +62,13 @@
             text-overflow: ellipsis; 
             font-weight: 500;
         }
-        .via { font-size: 1.2rem; color: #aaa; text-transform: uppercase; margin-top: -5px; }
+        .via { 
+            font-size: 1.3rem; 
+            color: #ccc; 
+            text-transform: uppercase; 
+            margin-top: -2px; 
+            font-weight: 900; 
+        }
 
         .time-box { text-align: right; min-width: 150px; }
         .time { font-size: 2.8rem; color: var(--skane-yellow); font-weight: bold; }
@@ -101,16 +107,15 @@
                 if (!searchData.stopLocationOrCoordLocation) return;
                 
                 const extId = searchData.stopLocationOrCoordLocation[0].StopLocation.extId;
-
                 const depRes = await fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${extId}&format=json&accessId=${apiKey}`);
                 const depData = await depRes.json();
 
                 let html = '';
                 if (depData.Departure) {
                     const filtered = depData.Departure.filter(dep => {
-                        const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
+                        const line = (dep.ProductAtStop && dep.ProductAtStop.displayNumber) || dep.transportNumber;
                         const dest = dep.direction.toLowerCase();
-                        const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
+                        const isTrain = (dep.ProductAtStop && dep.ProductAtStop.catOutL === "JLT") || dep.name.toLowerCase().includes('tåg');
 
                         if (isTrain) return true;
                         if (line === "141" && dest.includes("malmö")) return true;
@@ -121,18 +126,21 @@
                     });
 
                     filtered.slice(0, 8).forEach(dep => {
-                        const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
+                        const line = (dep.ProductAtStop && dep.ProductAtStop.displayNumber) || dep.transportNumber;
                         let destName = dep.direction.split(',')[0].replace('Svedala station', '').trim();
-                        
-                        const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
-                        
-                        // LOGIK FÖR "VIA MALMÖ"
+                        const isTrain = (dep.ProductAtStop && dep.ProductAtStop.catOutL === "JLT") || dep.name.toLowerCase().includes('tåg');
+                        const dLow = destName.toLowerCase();
+
+                        // VIA-LOGIK
                         let viaText = "";
                         if (isTrain) {
-                            const dLow = destName.toLowerCase();
-                            if (dLow.includes("helsingborg") || dLow.includes("malmö") || dLow.includes("hyllie")) {
-                                viaText = "via Malmö";
+                            if (dLow.includes("helsingborg")) {
+                                viaText = "VIA MALMÖ, LUND";
+                            } else if (dLow.includes("simrishamn")) {
+                                viaText = "VIA YSTAD";
                             }
+                        } else if (line === "165" && dLow.includes("lund")) {
+                            viaText = "VIA KLÅGERUP";
                         }
 
                         const schedTime = dep.time.substring(0, 5);
