@@ -15,7 +15,7 @@
             color: white;
             font-family: 'Segoe UI', Roboto, sans-serif;
             margin: 0;
-            padding: 15px;
+            padding: 20px;
             overflow: hidden;
             height: 100vh;
         }
@@ -23,50 +23,49 @@
             display: flex;
             justify-content: space-between;
             align-items: baseline;
-            border-bottom: 2px solid var(--skane-yellow);
-            padding-bottom: 5px;
-            margin-bottom: 15px;
+            border-bottom: 3px solid var(--skane-yellow);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
         }
-        h1 { font-size: 1.2rem; margin: 0; text-transform: uppercase; color: #888; letter-spacing: 1px; }
-        .clock { font-size: 1.8rem; font-weight: bold; }
+        h1 { font-size: 1.5rem; margin: 0; text-transform: uppercase; color: #888; }
+        .clock { font-size: 2.2rem; font-weight: bold; }
 
         .departure-row {
             display: flex;
             align-items: center;
             background: #111;
-            margin-bottom: 6px;
-            padding: 10px;
-            border-radius: 5px;
-            border-left: 6px solid var(--skane-green);
+            margin-bottom: 8px;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 8px solid var(--skane-green);
         }
         .line-badge {
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             font-weight: bold;
-            padding: 4px 8px;
-            border-radius: 3px;
-            min-width: 45px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            min-width: 55px;
             text-align: center;
-            margin-right: 12px;
+            margin-right: 15px;
             color: white;
         }
-        /* Specifika färger för tåg/buss */
         .bus { background-color: var(--skane-green); }
         .train { background-color: var(--skane-purple); }
         .train-row { border-left-color: var(--skane-purple); }
 
         .dest { 
-            font-size: 1.2rem; 
+            font-size: 1.5rem; 
             flex-grow: 1; 
             white-space: nowrap; 
             overflow: hidden; 
             text-overflow: ellipsis; 
         }
 
-        .time-box { text-align: right; min-width: 90px; }
-        .time { font-size: 1.3rem; color: var(--skane-yellow); font-weight: bold; }
-        .delay { font-size: 0.9rem; color: var(--delay-red); font-weight: bold; margin-left: 3px; }
+        .time-box { text-align: right; min-width: 100px; }
+        .time { font-size: 1.6rem; color: var(--skane-yellow); font-weight: bold; }
+        .delay { font-size: 1rem; color: var(--delay-red); font-weight: bold; margin-left: 5px; }
 
-        .status-bar { font-size: 0.7rem; color: #333; text-align: center; margin-top: 10px; }
+        .status-bar { font-size: 0.8rem; color: #333; text-align: center; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -77,7 +76,7 @@
     </div>
 
     <div id="board">
-        <div style="text-align:center; font-size: 1.2rem; margin-top: 50px; color: #444;">Hämtar data...</div>
+        <div style="text-align:center; font-size: 1.5rem; margin-top: 50px; color: #444;">Hämtar data...</div>
     </div>
     
     <div class="status-bar" id="debug">System OK</div>
@@ -85,7 +84,6 @@
     <script>
         const apiKey = '029d3e62-8c57-4161-a699-e81a51c12931';
 
-        // Funktion för att räkna ut försening i minuter
         function getDelay(sched, real) {
             if (!real || sched === real) return 0;
             const [sH, sM] = sched.split(':').map(Number);
@@ -95,21 +93,19 @@
 
         async function updateBoard() {
             try {
-                // Sökning efter station (din fungerande logik)
                 const searchRes = await fetch(`https://api.resrobot.se/v2.1/location.name?input=Svedala station&format=json&accessId=${apiKey}`);
                 const searchData = await searchRes.json();
                 if (!searchData.stopLocationOrCoordLocation) return;
                 
                 const extId = searchData.stopLocationOrCoordLocation[0].StopLocation.extId;
 
-                // Hämtning av avgångar
                 const depRes = await fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${extId}&format=json&accessId=${apiKey}`);
                 const depData = await depRes.json();
 
                 let html = '';
                 if (depData.Departure) {
-                    // Vi visar 12 avgångar istället för 7 eftersom det är en stående skärm
-                    depData.Departure.slice(0, 12).forEach(dep => {
+                    // Vi visar 10 avgångar för att fylla skärmen snyggt
+                    depData.Departure.slice(0, 10).forEach(dep => {
                         const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
                         const dest = dep.direction.split(',')[0].replace('Svedala station', '').trim();
                         
@@ -130,7 +126,7 @@
                             </div>`;
                     });
                     document.getElementById('board').innerHTML = html;
-                    document.getElementById('debug').innerText = "Uppdaterad: " + new Date().toLocaleTimeString();
+                    document.getElementById('debug').innerText = "Senast uppdaterad: " + new Date().toLocaleTimeString();
                 }
             } catch (error) {
                 console.error(error);
@@ -143,7 +139,6 @@
 
         setInterval(clock, 1000);
         setInterval(updateBoard, 30000);
-        
         clock();
         updateBoard();
     </script>
