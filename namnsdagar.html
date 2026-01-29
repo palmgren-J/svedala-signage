@@ -3,18 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Svedala Info - Lokala tider</title>
+    <title>Svedala Info - Frostig Vinter</title>
     <style>
         :root {
-            --bg-color: #002b5c;
-            --text-color: #f8f9fa;
-            --accent-color: #ffcc00;
-            --box-bg: rgba(255, 255, 255, 0.1);
+            /* Färgtema: Frostig Vinterdag */
+            --bg-gradient: linear-gradient(135deg, #0099db 0%, #00d4ff 100%); 
+            --text-color: #ffffff;
+            --accent-color: #ff9900; /* Orange kontrastfärg */
+            --box-bg: rgba(255, 255, 255, 0.15);
+            --shadow: 0 15px 35px rgba(0, 71, 107, 0.3);
         }
 
         body {
-            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
             color: var(--text-color);
             margin: 0;
             display: flex;
@@ -23,61 +26,86 @@
             align-items: center;
             height: 100vh;
             text-align: center;
+            overflow: hidden;
         }
 
         .container {
             width: 85%;
             max-width: 1100px;
             padding: 50px;
-            border-radius: 30px;
+            border-radius: 40px;
             background: var(--box-bg);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            backdrop-filter: blur(12px); /* Frostad glas-effekt */
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            animation: fadeIn 1.2s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .weekday { 
+            font-size: 1.8rem; 
+            text-transform: uppercase; 
+            letter-spacing: 4px; 
+            opacity: 0.9;
+            margin-bottom: 5px;
         }
 
         .date-large { 
-            font-size: 4.5rem; 
+            font-size: 4.8rem; 
             font-weight: 800; 
-            margin: 10px 0 20px 0;
-            color: var(--accent-color);
+            margin: 0 0 30px 0;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.2);
         }
         
-        .namnsdag-section {
-            margin-bottom: 40px;
+        .namnsdag-box {
+            background: rgba(255, 255, 255, 0.1);
             padding: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            margin-bottom: 40px;
         }
 
-        .label { font-size: 1.5rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; }
-        .value { font-size: 3.5rem; font-weight: bold; margin-top: 10px; }
+        .label { font-size: 1.2rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 2px; }
+        .value { font-size: 3.2rem; font-weight: bold; margin-top: 5px; color: var(--accent-color); }
 
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 25px;
-            margin-top: 20px;
         }
 
         .info-box {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 30px;
-            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.15);
+            padding: 25px;
+            border-radius: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        .time-val { font-size: 2.8rem; font-weight: bold; display: block; margin-top: 10px; }
+
         .trend {
-            margin-top: 50px;
-            font-size: 2.2rem;
-            color: var(--accent-color);
-            font-weight: 500;
+            margin-top: 40px;
+            font-size: 2rem;
+            font-weight: 600;
+            background: rgba(255, 153, 0, 0.15);
+            padding: 15px 30px;
+            border-radius: 50px;
+            display: inline-block;
+            border: 1px solid var(--accent-color);
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div id="weekday" class="label">Laddar...</div>
+    <div id="weekday" class="weekday">Laddar...</div>
     <div id="date-string" class="date-large">-- ---</div>
 
-    <div class="namnsdag-section">
+    <div class="namnsdag-box">
         <div class="label">Dagens namnsdag</div>
         <div id="namnsdag" class="value">...</div>
     </div>
@@ -85,21 +113,21 @@
     <div class="info-grid">
         <div class="info-box">
             <div class="label">☀️ Soluppgång</div>
-            <div id="sunrise" class="value">--:--</div>
+            <span id="sunrise" class="time-val">--:--</span>
         </div>
         <div class="info-box">
             <div class="label">🌙 Solnedgång</div>
-            <div id="sunset" class="value">--:--</div>
+            <span id="sunset" class="time-val">--:--</span>
         </div>
     </div>
 
-    <div id="change-text" class="trend"></div>
+    <div id="change-text" class="trend">Beräknar ljuset...</div>
 </div>
 
 <script>
-    // NAMNSDAGSLISTA (Inbyggd för att slippa externa fel)
+    // NAMNSDAGSLISTA (Komplett)
     const namnsdagar = {
-        "1-1": "Nyårsdagen", "1-2": "Svea", "1-3": "Alfred, Alfrida", "1-4": "Rut", "1-5": "Hanna, Hannele", "1-6": "Trettondedag jul", "1-7": "August, Augusta", "1-8": "Erland", "1-9": "Gunnar, Gunder", "1-10": "Sigurd, Sigbritt", "1-11": "Jan, Jannike", "1-12": "Frideborg, Fridolf", "1-13": "Knut", "1-14": "Felix, Felicia", "1-15": "Laura, Lorentz", "1-16": "Hjalmar, Helmer", "1-17": "Anton, Tony", "1-18": "Hilda, Hildur", "1-19": "Henrik", "1-20": "Fabian, Sebastian", "1-21": "Agnes, Agneta", "1-22": "Vincent, Viktor", "1-23": "Frej, Freja", "1-24": "Erika", "1-25": "Paul, Pål", "1-26": "Bodil, Boel", "1-27": "Göte, Göta", "1-28": "Karl, Karla", "1-29": "Diana", "1-30": "Gunilla, Gunhild", "1-31": "Ivar, Joar",
+        "1-1": "Nyårsdagen", "1-2": "Svea", "1-3": "Alfred, Alfrida", "1-4": "Rut", "1-5": "Hanna, Hannele", "1-6": "Kasper, Melker, Baltsar", "1-7": "August, Augusta", "1-8": "Erland", "1-9": "Gunnar, Gunder", "1-10": "Sigurd, Sigbritt", "1-11": "Jan, Jannike", "1-12": "Frideborg, Fridolf", "1-13": "Knut", "1-14": "Felix, Felicia", "1-15": "Laura, Lorentz", "1-16": "Hjalmar, Helmer", "1-17": "Anton, Tony", "1-18": "Hilda, Hildur", "1-19": "Henrik", "1-20": "Fabian, Sebastian", "1-21": "Agnes, Agneta", "1-22": "Vincent, Viktor", "1-23": "Frej, Freja", "1-24": "Erika", "1-25": "Paul, Pål", "1-26": "Bodil, Boel", "1-27": "Göte, Göta", "1-28": "Karl, Karla", "1-29": "Diana", "1-30": "Gunilla, Gunhild", "1-31": "Ivar, Joar",
         "2-1": "Max, Maximilian", "2-2": "Kyndelsmässodagen", "2-3": "Disa, Hjördis", "2-4": "Ansgar, Anselm", "2-5": "Agata, Agda", "2-6": "Dorotea, Doris", "2-7": "Rikard, Dick", "2-8": "Berta, Bert", "2-9": "Fanny, Franciska", "2-10": "Iris", "2-11": "Yngve, Inge", "2-12": "Evelina, Evy", "2-13": "Agne, Ove", "2-14": "Valentin", "2-15": "Sigfrid", "2-16": "Julia, Julius", "2-17": "Alexandra, Sandra", "2-18": "Frida, Fritiof", "2-19": "Gabriella, Ella", "2-20": "Vivianne", "2-21": "Hilding", "2-22": "Pia", "2-23": "Torsten, Torun", "2-24": "Mattias, Mats", "2-25": "Sigvard, Sivert", "2-26": "Torgny, Torkel", "2-27": "Lage", "2-28": "Maria", "2-29": "Skottdagen",
         "3-1": "Albin, Elvira", "3-2": "Erna, Ernst", "3-3": "Gunborg, Gunvor", "3-4": "Adrian, Adriana", "3-5": "Tora, Tove", "3-6": "Ebba, Ebbe", "3-7": "Camilla", "3-8": "Siv", "3-9": "Torbjörn, Torleif", "3-10": "Edla, Ada", "3-11": "Edvin, Egon", "3-12": "Viktoria", "3-13": "Greger", "3-14": "Matilda, Maud", "3-15": "Kristoffer, Christel", "3-16": "Herbert, Gilbert", "3-17": "Gertrud", "3-18": "Edvard, Edmund", "3-19": "Josef, Josefina", "3-20": "Joakim, Kim", "3-21": "Bengt", "3-22": "Kennet, Kent", "3-23": "Gerda, Gerd", "3-24": "Gabriel, Rafael", "3-25": "Marie bebådelsedag", "3-26": "Emanuel", "3-27": "Rudolf, Ralf", "3-28": "Malkolm, Morgan", "3-29": "Jonas, Jens", "3-30": "Holger, Holmfrid", "3-31": "Ester",
         "4-1": "Harald, Hervor", "4-2": "Gudmund, Ingemund", "4-3": "Ferdinand, Florence", "4-4": "Marianne, Marlene", "4-5": "Irene, Irja", "4-6": "Vilhelm, Helmi", "4-7": "Irma, Irmelin", "4-8": "Nadja, Tanja", "4-9": "Otto, Ottilia", "4-10": "Ingvar, Ingvor", "4-11": "Ulf, Ylva", "4-12": "Liv", "4-13": "Artur, Douglas", "4-14": "Tiburtius", "4-15": "Olivia, Oliver", "4-16": "Patrik, Patricia", "4-17": "Elias, Elis", "4-18": "Valdemar, Volmar", "4-19": "Olaus, Ola", "4-20": "Amalia, Amelie", "4-21": "Anneli, Annika", "4-22": "Allan, Glenn", "4-23": "Georg, Göran", "4-24": "Vega", "4-25": "Markus", "4-26": "Teresia, Terese", "4-27": "Engelbrekt", "4-28": "Ture, Tyra", "4-29": "Tyko", "4-30": "Mariana",
@@ -116,19 +144,19 @@
     const lat = 55.5074;
     const lng = 13.2351;
 
-    async function updateDashboard() {
+    async function updateData() {
         const now = new Date();
         const month = now.getMonth() + 1;
-        const day = now.getDate();
-        const key = `${month}-${day}`;
+        const date = now.getDate();
+        const key = `${month}-${date}`;
 
-        // 1. Datum & Namnsdag
+        // Uppdatera texter
         document.getElementById('weekday').innerText = now.toLocaleDateString('sv-SE', { weekday: 'long' });
         document.getElementById('date-string').innerText = now.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' });
         document.getElementById('namnsdag').innerText = namnsdagar[key] || "–";
 
-        // 2. Soltider (API för Svedala)
         try {
+            // Hämta soltider för Svedala
             const resToday = await fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`);
             const dataToday = await resToday.json();
             
@@ -146,13 +174,14 @@
             const trend = document.getElementById('change-text');
             if (diff > 0) trend.innerHTML = `☀️ Dagen är <strong>${diff} minuter längre</strong> än förra veckan`;
             else if (diff < 0) trend.innerHTML = `🌙 Dagen är <strong>${Math.abs(diff)} minuter kortare</strong> än förra veckan`;
+            else trend.innerText = "Ljusets återkomst är här!";
         } catch (e) {
-            console.log("Soltider kunde inte hämtas");
+            console.error("Kunde inte hämta soldata");
         }
     }
 
-    updateDashboard();
-    setInterval(updateDashboard, 1000 * 60 * 60 * 6); // Uppdatera var 6:e timme
+    updateData();
+    setInterval(updateData, 1000 * 60 * 60 * 6);
 </script>
 
 </body>
