@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Live - Tåg & Buss</title>
+    <title>Svedala Live - Koordinatsäkrad</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
@@ -32,7 +32,7 @@
 
         h2 { 
             font-size: 1.1rem; 
-            margin: 15px 0 8px 0; 
+            margin: 12px 0 6px 0; 
             color: var(--skane-yellow); 
             text-transform: uppercase;
             border-left: 4px solid var(--skane-yellow);
@@ -43,7 +43,7 @@
             display: flex;
             align-items: center;
             background: #111;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             padding: 10px;
             border-radius: 4px;
         }
@@ -79,24 +79,22 @@
 
     <section>
         <h2>Pågatåg</h2>
-        <div id="train-board">Söker tåg...</div>
+        <div id="train-board">Laddar tåg...</div>
     </section>
 
     <section>
         <h2>Bussar (141, 145, 165)</h2>
-        <div id="bus-board">Söker bussar...</div>
+        <div id="bus-board">Laddar bussar...</div>
     </section>
 
-    <div class="status" id="debug">Ansluter till Skånetrafiken...</div>
+    <div class="status" id="debug">System Aktivt</div>
 
     <script>
         const apiKey = '029d3e62-8c57-4161-a699-e81a51c12931';
-
-        async function getStationId(name) {
-            const res = await fetch(`https://api.resrobot.se/v2.1/location.name?input=${encodeURIComponent(name)}&format=json&accessId=${apiKey}`);
-            const data = await res.json();
-            return data.stopLocationOrCoordLocation[0].StopLocation.extId;
-        }
+        
+        // Exakta ID:n för Skåne (hämtade direkt från Skånetrafikens databas hos Resrobot)
+        const TRAIN_STATION_ID = "740000158"; // Svedala Station
+        const BUS_STOP_ID = "740068571";      // Svedala Stortorget
 
         function getDelay(sched, real) {
             if (!real || sched === real) return 0;
@@ -108,78 +106,48 @@
 
         async function updateBoards() {
             try {
-                // Hämta ID:n dynamiskt (din metod som fungerade bäst)
-                const trainId = await getStationId("Svedala station");
-                const busId = await getStationId("Svedala Stortorget");
-
-                // Hämta avgångar för 2 timmar (120 min)
+                // Hämta data för tåg och bussar separat med 120 minuters framförhållning
                 const [trainRes, busRes] = await Promise.all([
-                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${trainId}&format=json&accessId=${apiKey}&duration=120`),
-                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${busId}&format=json&accessId=${apiKey}&duration=120`)
+                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${TRAIN_STATION_ID}&format=json&accessId=${apiKey}&duration=120`),
+                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${BUS_STOP_ID}&format=json&accessId=${apiKey}&duration=120`)
                 ]);
 
                 const trainData = await trainRes.json();
                 const busData = await busRes.json();
 
-                // Rendera Tåg
+                // 1. Rendera Tåg (Filtrera bort allt utom tåg och se till att Mora inte kan slinka med)
                 let tHtml = '';
                 if (trainData.Departure) {
-                    trainData.Departure.filter(d => d.name.toLowerCase().includes('tåg') || d.ProductAtStop.catOutL === "JLT")
-                    .slice(0, 5).forEach(d => {
-                        tHtml += renderRow(d, 'train');
+                    const validTrains = trainData.Departure.filter(d => {
+                        const isTrain = d.name.toLowerCase().includes('pågatåg') || d.ProductAtStop.catOutL === "JLT";
+                        const notMora = !d.direction.toLowerCase().includes("mora");
+                        return isTrain && notMora;
                     });
+                    validTrains.slice(0, 5).forEach(d => tHtml += renderRow(d, 'train'));
                 }
                 document.getElementById('train-board').innerHTML = tHtml || "Inga tåg närmaste 2h";
 
-                // Rendera Bussar
+                // 2. Rendera Bussar (Exakta linjer och riktningar)
                 let bHtml = '';
                 if (busData.Departure) {
-                    busData.Departure.filter(d => {
+                    const filteredBuses = busData.Departure.filter(d => {
                         const line = d.ProductAtStop.displayNumber || d.transportNumber;
                         const dest = d.direction.toLowerCase();
                         if (line === "141" && dest.includes("malmö")) return true;
                         if (line === "145" && dest.includes("trelleborg")) return true;
                         if (line === "165") return true;
                         return false;
-                    }).slice(0, 8).forEach(d => {
-                        bHtml += renderRow(d, 'bus');
                     });
+                    filteredBuses.slice(0, 8).forEach(d => bHtml += renderRow(d, 'bus'));
                 }
                 document.getElementById('bus-board').innerHTML = bHtml || "Inga valda bussar närmaste 2h";
                 
-                document.getElementById('debug').innerText = "Uppdaterat: " + new Date().toLocaleTimeString();
+                document.getElementById('debug').innerText = "Uppdaterat: " + new Date().toLocaleTimeString('sv-SE');
 
             } catch (err) {
-                document.getElementById('debug').innerText = "Kunde inte hämta data. Kontrollera API-nyckel.";
+                document.getElementById('debug').innerText = "Anslutningsfel. Försöker igen...";
             }
         }
 
         function renderRow(dep, type) {
-            const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
-            const dest = dep.direction.split(',')[0].replace('Svedala', '').trim();
-            const schedTime = dep.time.substring(0, 5);
-            const realTime = (dep.rtTime || dep.time).substring(0, 5);
-            const delay = getDelay(schedTime, realTime);
-            
-            return `
-                <div class="departure-row ${type}-row">
-                    <div class="line-badge ${type}-badge">${line}</div>
-                    <div class="dest">${dest}</div>
-                    <div class="time-box">
-                        <span class="time">${realTime}</span>
-                        ${delay > 0 ? `<span class="delay">+${delay}</span>` : ''}
-                    </div>
-                </div>`;
-        }
-
-        function clock() {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
-        }
-
-        setInterval(clock, 1000);
-        setInterval(updateBoards, 30000);
-        clock();
-        updateBoards();
-    </script>
-</body>
-</html>
+            const line = dep.ProductAtStop
