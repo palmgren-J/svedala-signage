@@ -2,25 +2,22 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Trafik - Live</title>
+    <title>Svedala Live - Tåg & Buss</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
             --skane-purple: #5a2d81;
             --skane-yellow: #f9d400;
             --delay-red: #ff4444;
-            --bg-dark: #000;
         }
         body {
-            background-color: var(--bg-dark);
+            background-color: #000;
             color: white;
             font-family: 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 15px;
             overflow: hidden;
             height: 100vh;
-            display: flex;
-            flex-direction: column;
         }
         .header {
             display: flex;
@@ -30,15 +27,14 @@
             padding-bottom: 5px;
             margin-bottom: 10px;
         }
-        .header h1 { font-size: 1.2rem; margin: 0; text-transform: uppercase; color: #888; }
-        .clock { font-size: 1.8rem; font-weight: bold; color: #fff; }
+        h1 { font-size: 1.2rem; margin: 0; text-transform: uppercase; color: #888; }
+        .clock { font-size: 1.8rem; font-weight: bold; }
 
         h2 { 
             font-size: 1.1rem; 
             margin: 15px 0 8px 0; 
             color: var(--skane-yellow); 
             text-transform: uppercase;
-            letter-spacing: 1px;
             border-left: 4px solid var(--skane-yellow);
             padding-left: 10px;
         }
@@ -47,40 +43,31 @@
             display: flex;
             align-items: center;
             background: #111;
-            margin-bottom: 4px;
-            padding: 8px 12px;
+            margin-bottom: 5px;
+            padding: 10px;
             border-radius: 4px;
         }
         
-        /* Tåg-stil */
         .train-row { border-left: 6px solid var(--skane-purple); }
-        .train-badge { background-color: var(--skane-purple); color: white; }
-
-        /* Buss-stil */
         .bus-row { border-left: 6px solid var(--skane-orange); }
-        .bus-badge { background-color: var(--skane-orange); color: #000; }
 
         .line-badge {
             font-size: 1.1rem;
             font-weight: bold;
-            padding: 3px 8px;
+            padding: 4px 8px;
             border-radius: 3px;
             min-width: 45px;
             text-align: center;
             margin-right: 12px;
         }
-        .dest { 
-            font-size: 1.2rem; 
-            flex-grow: 1; 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-        }
+        .train-badge { background-color: var(--skane-purple); color: white; }
+        .bus-badge { background-color: var(--skane-orange); color: #000; }
+
+        .dest { font-size: 1.2rem; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .time-box { text-align: right; min-width: 90px; }
         .time { font-size: 1.3rem; color: var(--skane-yellow); font-weight: bold; }
         .delay { font-size: 0.9rem; color: var(--delay-red); font-weight: bold; margin-left: 3px; }
-
-        .no-data { color: #444; font-size: 0.9rem; padding-left: 15px; font-style: italic; }
+        .status { font-size: 0.7rem; color: #333; text-align: center; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -91,19 +78,25 @@
     </div>
 
     <section>
-        <h2>Pågatåg (Stationen)</h2>
-        <div id="train-board"></div>
+        <h2>Pågatåg</h2>
+        <div id="train-board">Söker tåg...</div>
     </section>
 
     <section>
-        <h2>Bussar (Stortorget)</h2>
-        <div id="bus-board"></div>
+        <h2>Bussar (141, 145, 165)</h2>
+        <div id="bus-board">Söker bussar...</div>
     </section>
+
+    <div class="status" id="debug">Ansluter till Skånetrafiken...</div>
 
     <script>
         const apiKey = '029d3e62-8c57-4161-a699-e81a51c12931';
-        const idStation = '740000158'; // Svedala Station
-        const idStortorget = '740068571'; // Svedala Stortorget
+
+        async function getStationId(name) {
+            const res = await fetch(`https://api.resrobot.se/v2.1/location.name?input=${encodeURIComponent(name)}&format=json&accessId=${apiKey}`);
+            const data = await res.json();
+            return data.stopLocationOrCoordLocation[0].StopLocation.extId;
+        }
 
         function getDelay(sched, real) {
             if (!real || sched === real) return 0;
@@ -113,60 +106,64 @@
             return diff > 0 ? diff : 0;
         }
 
-        async function fetchData(id) {
-            const res = await fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${id}&format=json&accessId=${apiKey}&duration=120`);
-            return await res.json();
-        }
-
         async function updateBoards() {
             try {
-                // Hämta data för båda platserna
-                const [trainData, busData] = await Promise.all([fetchData(idStation), fetchData(idStortorget)]);
+                // Hämta ID:n dynamiskt (din metod som fungerade bäst)
+                const trainId = await getStationId("Svedala station");
+                const busId = await getStationId("Svedala Stortorget");
 
-                // 1. Rendera Tåg
-                let trainHtml = '';
+                // Hämta avgångar för 2 timmar (120 min)
+                const [trainRes, busRes] = await Promise.all([
+                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${trainId}&format=json&accessId=${apiKey}&duration=120`),
+                    fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${busId}&format=json&accessId=${apiKey}&duration=120`)
+                ]);
+
+                const trainData = await trainRes.json();
+                const busData = await busRes.json();
+
+                // Rendera Tåg
+                let tHtml = '';
                 if (trainData.Departure) {
-                    const trains = trainData.Departure.filter(dep => 
-                        dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg')
-                    );
-                    trains.slice(0, 6).forEach(dep => {
-                        trainHtml += createRow(dep, 'train');
+                    trainData.Departure.filter(d => d.name.toLowerCase().includes('tåg') || d.ProductAtStop.catOutL === "JLT")
+                    .slice(0, 5).forEach(d => {
+                        tHtml += renderRow(d, 'train');
                     });
                 }
-                document.getElementById('train-board').innerHTML = trainHtml || '<div class="no-data">Inga tåg närmaste 2h</div>';
+                document.getElementById('train-board').innerHTML = tHtml || "Inga tåg närmaste 2h";
 
-                // 2. Rendera Bussar med filter
-                let busHtml = '';
+                // Rendera Bussar
+                let bHtml = '';
                 if (busData.Departure) {
-                    const filteredBuses = busData.Departure.filter(dep => {
-                        const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
-                        const dest = dep.direction.toLowerCase();
+                    busData.Departure.filter(d => {
+                        const line = d.ProductAtStop.displayNumber || d.transportNumber;
+                        const dest = d.direction.toLowerCase();
                         if (line === "141" && dest.includes("malmö")) return true;
                         if (line === "145" && dest.includes("trelleborg")) return true;
                         if (line === "165") return true;
                         return false;
-                    });
-                    filteredBuses.slice(0, 8).forEach(dep => {
-                        busHtml += createRow(dep, 'bus');
+                    }).slice(0, 8).forEach(d => {
+                        bHtml += renderRow(d, 'bus');
                     });
                 }
-                document.getElementById('bus-board').innerHTML = busHtml || '<div class="no-data">Inga valda bussar närmaste 2h</div>';
+                document.getElementById('bus-board').innerHTML = bHtml || "Inga valda bussar närmaste 2h";
+                
+                document.getElementById('debug').innerText = "Uppdaterat: " + new Date().toLocaleTimeString();
 
-            } catch (e) { console.error("Update error", e); }
+            } catch (err) {
+                document.getElementById('debug').innerText = "Kunde inte hämta data. Kontrollera API-nyckel.";
+            }
         }
 
-        function createRow(dep, type) {
+        function renderRow(dep, type) {
             const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
             const dest = dep.direction.split(',')[0].replace('Svedala', '').trim();
             const schedTime = dep.time.substring(0, 5);
             const realTime = (dep.rtTime || dep.time).substring(0, 5);
             const delay = getDelay(schedTime, realTime);
-            const rowClass = type === 'train' ? 'train-row' : 'bus-row';
-            const badgeClass = type === 'train' ? 'train-badge' : 'bus-badge';
-
+            
             return `
-                <div class="departure-row ${rowClass}">
-                    <div class="line-badge ${badgeClass}">${line}</div>
+                <div class="departure-row ${type}-row">
+                    <div class="line-badge ${type}-badge">${line}</div>
                     <div class="dest">${dest}</div>
                     <div class="time-box">
                         <span class="time">${realTime}</span>
