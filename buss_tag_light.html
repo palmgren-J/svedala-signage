@@ -2,13 +2,13 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Live - Ljus Version</title>
+    <title>Svedala Station & Stortorget</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
             --skane-purple: #5a2d81;
             --skane-yellow: #f9d400;
-            --delay-red: #d32f2f; /* Något mörkare röd för vit bakgrund */
+            --delay-red: #d32f2f;
             --bg-light: #f4f4f4;
             --text-main: #222;
             --text-sub: #666;
@@ -25,12 +25,18 @@
         .header {
             display: flex;
             justify-content: space-between;
-            align-items: baseline;
-            border-bottom: 4px solid var(--skane-purple); /* Lila linje i ljus version */
+            align-items: center;
+            border-bottom: 4px solid var(--skane-purple);
             padding-bottom: 15px;
             margin-bottom: 25px;
         }
-        h1 { font-size: 2rem; margin: 0; text-transform: uppercase; color: var(--skane-purple); }
+        h1 { 
+            font-size: 2.2rem; 
+            margin: 0; 
+            text-transform: uppercase; 
+            color: var(--skane-purple);
+            letter-spacing: 1px;
+        }
         .clock { font-size: 3.5rem; font-weight: bold; color: var(--text-main); }
 
         .departure-row {
@@ -41,7 +47,7 @@
             padding: 20px;
             border-radius: 10px;
             border-left: 15px solid var(--skane-orange);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Subtil skugga */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
         }
         .train-row { border-left-color: var(--skane-purple); }
 
@@ -80,18 +86,18 @@
         .time { font-size: 2.8rem; color: #000; font-weight: bold; }
         .delay { font-size: 1.5rem; color: var(--delay-red); font-weight: bold; margin-left: 10px; }
 
-        .status-bar { font-size: 0.9rem; color: #888; text-align: center; margin-top: 20px; }
+        .status-bar { font-size: 0.9rem; color: #999; text-align: center; margin-top: 20px; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>Svedala Live</h1>
+        <h1>Svedala Station & Stortorget</h1>
         <div class="clock" id="clock">00:00</div>
     </div>
 
     <div id="board">
-        <div style="text-align:center; font-size: 2rem; margin-top: 50px; color: #ccc;">Laddar avgångar...</div>
+        <div style="text-align:center; font-size: 2rem; margin-top: 50px; color: #ccc;">Hämtar trafikdata...</div>
     </div>
     
     <div class="status-bar" id="debug">System OK</div>
@@ -191,4 +197,3 @@
         updateBoard();
     </script>
 </body>
-</html>
