@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Tåg och bussar från Svedala - Koordinatsäkrad</title>
+    <title>Svedala Live - Koordinatsäkrad</title>
     <style>
         :root {
             --skane-orange: #ffb400; 
@@ -83,7 +83,7 @@
     </section>
 
     <section>
-        <h2>Bussar från Stortorget (141, 145, 165)</h2>
+        <h2>Bussar (141, 145, 165)</h2>
         <div id="bus-board">Laddar bussar...</div>
     </section>
 
@@ -150,4 +150,31 @@
         }
 
         function renderRow(dep, type) {
-            const line = dep.ProductAtStop
+            const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
+            const dest = dep.direction.split(',')[0].replace('Svedala', '').trim();
+            const schedTime = dep.time.substring(0, 5);
+            const realTime = (dep.rtTime || dep.time).substring(0, 5);
+            const delay = getDelay(schedTime, realTime);
+            
+            return `
+                <div class="departure-row ${type}-row">
+                    <div class="line-badge ${type}-badge">${line}</div>
+                    <div class="dest">${dest}</div>
+                    <div class="time-box">
+                        <span class="time">${realTime}</span>
+                        ${delay > 0 ? `<span class="delay">+${delay}</span>` : ''}
+                    </div>
+                </div>`;
+        }
+
+        function clock() {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
+        }
+
+        setInterval(clock, 1000);
+        setInterval(updateBoards, 30000);
+        clock();
+        updateBoards();
+    </script>
+</body>
+</html>
