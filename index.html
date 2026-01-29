@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <title>Svedala Station - Endast Skåne</title>
+    <title>Svedala Station - Portrait</title>
     <style>
         :root {
             --skane-green: #21ad3b;
@@ -13,138 +13,137 @@
         body {
             background-color: #000;
             color: white;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Roboto, sans-serif;
             margin: 0;
-            padding: 30px;
+            padding: 15px;
             overflow: hidden;
+            height: 100vh;
         }
         .header {
-            display: block;
-            border-bottom: 6px solid var(--skane-yellow);
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            border-bottom: 2px solid var(--skane-yellow);
+            padding-bottom: 5px;
+            margin-bottom: 15px;
         }
-        .station-name { font-size: 50px; font-weight: bold; text-transform: uppercase; margin: 0; }
-        .clock { font-size: 70px; font-weight: bold; float: right; margin-top: -80px; }
+        h1 { font-size: 1.2rem; margin: 0; text-transform: uppercase; color: #888; letter-spacing: 1px; }
+        .clock { font-size: 1.8rem; font-weight: bold; }
 
         .departure-row {
-            display: table;
-            width: 100%;
-            background: #1a1a1a;
-            margin-bottom: 15px;
-            padding: 25px 0;
-            border-radius: 10px;
-            border-left: 20px solid var(--skane-green);
+            display: flex;
+            align-items: center;
+            background: #111;
+            margin-bottom: 6px;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 6px solid var(--skane-green);
         }
         .line-badge {
-            display: table-cell;
-            width: 140px;
-            font-size: 45px;
+            font-size: 1.1rem;
             font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 3px;
+            min-width: 45px;
             text-align: center;
-            vertical-align: middle;
+            margin-right: 12px;
             color: white;
         }
+        /* Specifika färger för tåg/buss */
         .bus { background-color: var(--skane-green); }
         .train { background-color: var(--skane-purple); }
         .train-row { border-left-color: var(--skane-purple); }
 
         .dest { 
-            display: table-cell;
-            font-size: 45px; 
-            padding-left: 20px;
-            vertical-align: middle;
-            white-space: nowrap;
+            font-size: 1.2rem; 
+            flex-grow: 1; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
         }
 
-        .time-box { 
-            display: table-cell;
-            text-align: right; 
-            padding-right: 30px;
-            vertical-align: middle;
-            width: 250px;
-        }
-        .time { font-size: 50px; color: var(--skane-yellow); font-weight: bold; }
-        .delay { font-size: 30px; color: var(--delay-red); font-weight: bold; margin-left: 10px; }
+        .time-box { text-align: right; min-width: 90px; }
+        .time { font-size: 1.3rem; color: var(--skane-yellow); font-weight: bold; }
+        .delay { font-size: 0.9rem; color: var(--delay-red); font-weight: bold; margin-left: 3px; }
+
+        .status-bar { font-size: 0.7rem; color: #333; text-align: center; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="station-name">Svedala Station</div>
+        <h1>Svedala Station</h1>
         <div class="clock" id="clock">00:00</div>
     </div>
 
     <div id="board">
-        <div style="text-align:center; font-size: 40px; margin-top: 100px;">Hämtar tågtider för Svedala...</div>
+        <div style="text-align:center; font-size: 1.2rem; margin-top: 50px; color: #444;">Hämtar data...</div>
     </div>
+    
+    <div class="status-bar" id="debug">System OK</div>
 
     <script>
-        var apiKey = '029d3e62-8c57-4161-a699-e81a51c12931';
+        const apiKey = '029d3e62-8c57-4161-a699-e81a51c12931';
 
-        function updateBoard() {
-            var xhr = new XMLHttpRequest();
-            // Vi lägger till filter för Skånetrafiken (operators=279) 
-            // och tvingar API:et att använda det ID som tillhör Svedala i Skåne.
-            var url = 'https://api.resrobot.se/v2.1/departureBoard?id=740000158&format=json&accessId=' + apiKey + '&operators=279';
-            
-            xhr.open('GET', url, true);
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState == 4 && xhr.status == 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    var html = '';
-                    if (data.Departure) {
-                        var count = 0;
-                        for (var i = 0; i < data.Departure.length; i++) {
-                            if (count >= 10) break; // Visa max 10 rader
-                            
-                            var dep = data.Departure[i];
-                            var dest = dep.direction.split(',')[0].replace('Svedala station', '').trim();
-                            
-                            // FILTRERING: Om destinationen innehåller "Mora" eller "Falun", hoppa över den.
-                            if (dest.indexOf("Mora") !== -1 || dest.indexOf("Falun") !== -1) continue;
+        // Funktion för att räkna ut försening i minuter
+        function getDelay(sched, real) {
+            if (!real || sched === real) return 0;
+            const [sH, sM] = sched.split(':').map(Number);
+            const [rH, rM] = real.split(':').map(Number);
+            return (rH * 60 + rM) - (sH * 60 + sM);
+        }
 
-                            var line = dep.ProductAtStop.displayNumber || dep.transportNumber;
-                            var schedTime = dep.time.substring(0, 5);
-                            var realTime = (dep.rtTime || dep.time).substring(0, 5);
-                            
-                            var delayStr = '';
-                            if (dep.rtTime && dep.rtTime !== dep.time) {
-                                var s = schedTime.split(':');
-                                var r = realTime.split(':');
-                                var diff = (parseInt(r[0])*60 + parseInt(r[1])) - (parseInt(s[0])*60 + parseInt(s[1]));
-                                if (diff > 0) delayStr = '<span class="delay">+' + diff + '</span>';
-                            }
+        async function updateBoard() {
+            try {
+                // Sökning efter station (din fungerande logik)
+                const searchRes = await fetch(`https://api.resrobot.se/v2.1/location.name?input=Svedala station&format=json&accessId=${apiKey}`);
+                const searchData = await searchRes.json();
+                if (!searchData.stopLocationOrCoordLocation) return;
+                
+                const extId = searchData.stopLocationOrCoordLocation[0].StopLocation.extId;
 
-                            var isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().indexOf('pågatåg') !== -1;
-                            var rowClass = isTrain ? 'departure-row train-row' : 'departure-row';
-                            var badgeClass = isTrain ? 'line-badge train' : 'line-badge bus';
+                // Hämtning av avgångar
+                const depRes = await fetch(`https://api.resrobot.se/v2.1/departureBoard?id=${extId}&format=json&accessId=${apiKey}`);
+                const depData = await depRes.json();
 
-                            html += '<div class="' + rowClass + '">' +
-                                    '<div class="' + badgeClass + '">' + line + '</div>' +
-                                    '<div class="dest">' + dest + '</div>' +
-                                    '<div class="time-box"><span class="time">' + realTime + '</span>' + delayStr + '</div>' +
-                                    '</div>';
-                            count++;
-                        }
-                        document.getElementById('board').innerHTML = html;
-                    }
+                let html = '';
+                if (depData.Departure) {
+                    // Vi visar 12 avgångar istället för 7 eftersom det är en stående skärm
+                    depData.Departure.slice(0, 12).forEach(dep => {
+                        const line = dep.ProductAtStop.displayNumber || dep.transportNumber;
+                        const dest = dep.direction.split(',')[0].replace('Svedala station', '').trim();
+                        
+                        const schedTime = dep.time.substring(0, 5);
+                        const realTime = (dep.rtTime || dep.time).substring(0, 5);
+                        const delayMin = getDelay(schedTime, realTime);
+
+                        const isTrain = dep.ProductAtStop.catOutL === "JLT" || dep.name.toLowerCase().includes('tåg');
+
+                        html += `
+                            <div class="departure-row ${isTrain ? 'train-row' : ''}">
+                                <div class="line-badge ${isTrain ? 'train' : 'bus'}">${line}</div>
+                                <div class="dest">${dest}</div>
+                                <div class="time-box">
+                                    <span class="time">${realTime}</span>
+                                    ${delayMin > 0 ? `<span class="delay">+${delayMin}</span>` : ''}
+                                </div>
+                            </div>`;
+                    });
+                    document.getElementById('board').innerHTML = html;
+                    document.getElementById('debug').innerText = "Uppdaterad: " + new Date().toLocaleTimeString();
                 }
-            };
-            xhr.send();
+            } catch (error) {
+                console.error(error);
+            }
         }
 
         function clock() {
-            var now = new Date();
-            var h = now.getHours();
-            var m = now.getMinutes();
-            if (h < 10) h = '0' + h;
-            if (m < 10) m = '0' + m;
-            document.getElementById('clock').innerHTML = h + ':' + m;
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
         }
 
         setInterval(clock, 1000);
         setInterval(updateBoard, 30000);
+        
         clock();
         updateBoard();
     </script>
